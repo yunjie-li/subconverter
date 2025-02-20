@@ -228,6 +228,15 @@ namespace INIBinding
                 {
                     if(rules_upper_bound < 5)
                         continue;
+                    if(conf.Type == ProxyGroupType::LoadBalance)
+                    {
+                        conf.Strategy = "consistent-hashing";
+                        if(rules_upper_bound > 4 && 
+                            (vArray[2] == "round-robin" || vArray[2] == "consistent-hashing"))
+                        {
+                            conf.Strategy = vArray[2];
+                        }
+                    }
                     rules_upper_bound -= 2;
                     conf.Url = vArray[rules_upper_bound];
                     parseGroupTimes(vArray[rules_upper_bound + 1], &conf.Interval, &conf.Timeout, &conf.Tolerance);

@@ -230,11 +230,13 @@ namespace INIBinding
                         continue;
                     if(conf.Type == ProxyGroupType::LoadBalance)
                     {
-                        conf.Strategy = "consistent-hashing";
-                        if(rules_upper_bound > 4 && 
-                            (vArray[2] == "round-robin" || vArray[2] == "consistent-hashing"))
+                        conf.Strategy = BalanceStrategy::ConsistentHashing;
+                        if(rules_upper_bound > 4)
                         {
-                            conf.Strategy = vArray[2];
+                            if(vArray[2] == "round-robin")
+                                conf.Strategy = BalanceStrategy::RoundRobin;
+                            else if(vArray[2] == "consistent-hashing")
+                                conf.Strategy = BalanceStrategy::ConsistentHashing;
                         }
                     }
                     rules_upper_bound -= 2;

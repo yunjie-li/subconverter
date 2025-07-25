@@ -1090,7 +1090,7 @@ std::string proxyToSurge(std::vector<Proxy> &nodes, const std::string &base_conf
                     proxy += ",sni=" + x.ServerName;
                 if (!x.Ports.empty())
                     proxy += ",port-hopping=" + x.Ports;
-            break;
+                break;
             case ProxyType::WireGuard:
                 if (surge_ver < 4 && surge_ver != -3)
                     continue;

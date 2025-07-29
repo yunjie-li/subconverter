@@ -1088,6 +1088,8 @@ std::string proxyToSurge(std::vector<Proxy> &nodes, const std::string &base_conf
                     proxy += ",server-cert-fingerprint-sha256=" + x.Fingerprint;
                 if (!x.ServerName.empty())
                     proxy += ",sni=" + x.ServerName;
+                if (!x.Ports.empty())
+                    proxy += ",port-hopping=" + x.Ports;
                 break;
             case ProxyType::WireGuard:
                 if (surge_ver < 4 && surge_ver != -3)

@@ -37,14 +37,25 @@ std::map<std::string, std::string> parsedMD5;
 std::string modSSMD5 = "f7653207090ce3389115e9c88541afe0";
 
 //remake from speedtestutil
+std::string removeBrackets(const std::string& input) {
+    std::string result = input;
+    size_t left = result.find('[');
+    size_t right = result.find(']');
 
+    if (left != std::string::npos && right != std::string::npos && right > left) {
+        result.erase(right, 1); // 删除 ']'
+        result.erase(left, 1);  // 删除 '['
+    }
+
+    return result;
+}
 void commonConstruct(Proxy &node, ProxyType type, const std::string &group, const std::string &remarks,
                      const std::string &server, const std::string &port, const tribool &udp, const tribool &tfo,
                      const tribool &scv, const tribool &tls13, const std::string &underlying_proxy) {
     node.Type = type;
     node.Group = group;
     node.Remark = remarks;
-    node.Hostname = server;
+    node.Hostname = removeBrackets(server);
     node.Port = to_int(port);
     node.UDP = udp;
     node.TCPFastOpen = tfo;

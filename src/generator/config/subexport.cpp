@@ -1298,8 +1298,13 @@ std::string proxyToSingle(std::vector<Proxy> &nodes, int types, extra_settings &
                                ? "00000000-0000-0000-0000-000000000000"
                                : id) + "@" + hostname + ":" + port+"?";
                 if (!tls.empty()) {
-                    proxyStr += "&security=" + tls;
+                    if (!pbk.empty()) {
+                        proxyStr += "&security=reality";
+                    }else {
+                        proxyStr += "&security=" + tls;
+                    }
                 }
+
                 if (!flow.empty()) {
                     proxyStr += "&flow=" + flow;
                 }
@@ -2860,7 +2865,7 @@ proxyToSingBox(std::vector<Proxy> &nodes, rapidjson::Document &json,
                     rapidjson::Value utls(rapidjson::kObjectType);
                     utls.AddMember("enabled", true, allocator);
                     utls.AddMember("fingerprint", rapidjson::StringRef(x.Fingerprint.c_str()), allocator);
-                    proxy.AddMember("utls", utls, allocator);
+                    tls.AddMember("utls", utls, allocator);
                 }
                 proxy.AddMember("tls", tls, allocator);
                 break;

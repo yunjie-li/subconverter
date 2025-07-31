@@ -1807,6 +1807,12 @@ void explodeStdVless(std::string vless, Proxy &node) {
             host = getUrlArg(addition, strFind(addition, "sni") ? "sni" : "host");
             path = getUrlArg(addition, "path");
             break;
+        case "xhttp"_hash: // 新增对 type=xhttp 的支持
+            net = "h2"; // 视为 h2/http2 传输
+            type = getUrlArg(addition, "headerType");
+            host = getUrlArg(addition, strFind(addition, "sni") ? "sni" : "host");
+            path = getUrlArg(addition, "path");
+            break;
         case "grpc"_hash:
             host = getUrlArg(addition, "sni");
             path = getUrlArg(addition, "serviceName");

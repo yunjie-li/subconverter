@@ -2262,7 +2262,7 @@ proxyToLoon(std::vector<Proxy> &nodes, const std::string &base_conf,
                 if (flow != "xtls-rprx-vision") {
                     if (transproto == "ws") {
                         proxy = "VLESS," + hostname + "," + port + ",\"" + id + "\"" +
-                            ",path=" + path + ",host=" + host + ",transproto=" + transproto +
+                            ",path=" + path + ",host=" + host + ",transport=" + transproto +
                             ",udp=" + (udp.get() ? "true" : "false") + ",over-tls=" + (
                                 tlssecure ? "true" : "false") + ",sni=" + sni;
                     } else {

@@ -943,6 +943,11 @@ void explodeTrojan(std::string trojan, Proxy &node) {
         network = "ws";
     }
 
+    else if (getUrlArg(addition, "type") == "grpc") {  
+        path = getUrlArg(addition, "serviceName");  
+        network = "grpc";  
+    }
+    
     if (remark.empty())
         remark = server + ":" + port;
     if (group.empty())

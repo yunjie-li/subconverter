@@ -1,33 +1,9 @@
 #!/bin/bash
 set -xe
 
-# 获取系统架构
-ARCH=$(uname -m)
-
-if [ "$ARCH" == "x86_64" ]; then
-    TOOLCHAIN="mingw-w64-x86_64"
-else
-    TOOLCHAIN="mingw-w64-i686"
-fi
-
-pacman -S --needed --noconfirm base-devel ${TOOLCHAIN}-toolchain ${TOOLCHAIN}-cmake ${TOOLCHAIN}-nghttp2 ${TOOLCHAIN}-openssl
-
-git clone https://github.com/curl/curl --depth=1 --branch curl-8_8_0
+git clone https://github.com/curl/curl --depth=1 --branch curl-8_6_0
 cd curl
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DCURL_USE_LIBSSH2=OFF \
-      -DHTTP_ONLY=ON \
-      -DCURL_USE_SCHANNEL=ON \
-      -DBUILD_SHARED_LIBS=OFF \
-      -DBUILD_CURL_EXE=OFF \
-      -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX" \
-      -G "Unix Makefiles" \
-      -DHAVE_LIBIDN2=OFF \
-      -DCURL_USE_LIBPSL=OFF \
-      -DCURL_STATICLIB=ON \
-      -DCURL_DISABLE_SOCKETPAIR=ON \
-      -DCURL_DISABLE_NONBLOCKING=ON .
-
+cmake -DCMAKE_BUILD_TYPE=Release -DCURL_USE_LIBSSH2=OFF -DHTTP_ONLY=ON -DCURL_USE_SCHANNEL=ON -DBUILD_SHARED_LIBS=OFF -DBUILD_CURL_EXE=OFF -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX" -G "Unix Makefiles" -DHAVE_LIBIDN2=OFF -DCURL_USE_LIBPSL=OFF .
 make install -j4
 cd ..
 
@@ -37,11 +13,16 @@ cmake -DCMAKE_BUILD_TYPE=Release -DYAML_CPP_BUILD_TESTS=OFF -DYAML_CPP_BUILD_TOO
 make install -j4
 cd ..
 
-git clone https://github.com/ftk/quickjspp --depth=1
+git clone --no-checkout https://github.com/ftk/quickjspp.git
 cd quickjspp
+git fetch origin 0c00c48895919fc02da3f191a2da06addeb07f09
+git checkout 0c00c48895919fc02da3f191a2da06addeb07f09
 patch quickjs/quickjs-libc.c -i ../scripts/patches/0001-quickjs-libc-add-realpath-for-Windows.patch
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release .
+cmake -G "Unix Makefiles" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_FLAGS="-D__MINGW_FENV_DEFINED" .
 make quickjs -j4
+
 install -d "$MINGW_PREFIX/lib/quickjs/"
 install -m644 quickjs/libquickjs.a "$MINGW_PREFIX/lib/quickjs/"
 install -d "$MINGW_PREFIX/include/quickjs"
@@ -62,7 +43,7 @@ cmake -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD
 make install -j4
 cd ..
 
-git clone https://github.com/ToruNiina/toml11 --branch="v3.7.1" --depth=1
+git clone https://github.com/ToruNiina/toml11 --branch "v4.3.0" --depth=1
 cd toml11
 cmake -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX" -G "Unix Makefiles" -DCMAKE_CXX_STANDARD=11 .
 make install -j4
@@ -77,5 +58,5 @@ cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" .
 make -j4
 rm subconverter.exe
 # shellcheck disable=SC2046
-g++ $(find CMakeFiles/subconverter.dir/src -name "*.obj") curl/lib/libcurl.a -o base/subconverter.exe -static -lbcrypt -lpcre2-8 -l:quickjs/libquickjs.a -llibcron -lyaml-cpp -liphlpapi -lcrypt32 -lws2_32 -lwsock32 -lz -s
+g++ $(find CMakeFiles/subconverter.dir/src -name "*.obj") curl/lib/libcurl.a -o base/subconverter.exe -static -Wl,--allow-multiple-definition -lbcrypt -lpcre2-8  -llibcron -lyaml-cpp -liphlpapi -lcrypt32 -lws2_32 -lwsock32 -lz  -Lquickjspp/quickjs -lquickjs -s 
 mv base subconverter

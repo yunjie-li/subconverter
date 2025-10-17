@@ -58,31 +58,33 @@ struct UAProfile {
 };
 
 const std::vector<UAProfile> UAMatchList = {
-        {"ClashForAndroid", "\\/([0-9.]+)",      "2.0",  "clash",  true},
-        {"ClashForAndroid", "\\/([0-9.]+)R",     "",     "clashr", false},
-        {"ClashForAndroid", "",                  "",     "clash",  false},
-        {"ClashforWindows", "\\/([0-9.]+)",      "0.11", "clash",  true},
-        {"ClashforWindows", "",                  "",     "clash",  false},
-        {"ClashX Pro",      "",                  "",     "clash",  true},
-        {"ClashX",          "\\/([0-9.]+)",      "0.13", "clash",  true},
-        {"Clash",           "",                  "",     "clash",  true},
-        {"Kitsunebi",       "",                  "",     "v2ray"},
-        {"Loon",            "",                  "",     "loon"},
-        {"Pharos",          "",                  "",     "mixed"},
-        {"Potatso",         "",                  "",     "mixed"},
-        {"Quantumult%20X",  "",                  "",     "quanx"},
-        {"Quantumult",      "",                  "",     "quan"},
-        {"Qv2ray",          "",                  "",     "v2ray"},
-        {"Shadowrocket",    "",                  "",     "mixed"},
-        {"Surfboard",       "",                  "",     "surfboard"},
-        {"Surge",           "\\/([0-9.]+).*x86", "906",  "surge",  false, 4}, /// Surge for Mac (supports VMess)
-        {"Surge",           "\\/([0-9.]+).*x86", "368",  "surge",  false, 3}, /// Surge for Mac (supports new rule types and Shadowsocks without plugin)
-        {"Surge",           "\\/([0-9.]+)",      "1419", "surge",  false, 4}, /// Surge iOS 4 (first version)
-        {"Surge",           "\\/([0-9.]+)",      "900",  "surge",  false, 3}, /// Surge iOS 3 (approx)
-        {"Surge",           "",                  "",     "surge",  false, 2}, /// any version of Surge as fallback
-        {"Trojan-Qt5",      "",                  "",     "trojan"},
-        {"V2rayU",          "",                  "",     "v2ray"},
-        {"V2RayX",          "",                  "",     "v2ray"}
+    {"ClashForAndroid", "\\/([0-9.]+)", "2.0", "clash", true},
+    {"ClashForAndroid", "\\/([0-9.]+)R", "", "clashr", false},
+    {"ClashForAndroid", "", "", "clash", false},
+    {"ClashforWindows", "\\/([0-9.]+)", "0.11", "clash", true},
+    {"ClashforWindows", "", "", "clash", false},
+    {"clash-verge", "", "", "clash", true},
+    {"ClashX Pro", "", "", "clash", true},
+    {"ClashX", "\\/([0-9.]+)", "0.13", "clash", true},
+    {"Clash", "", "", "clash", true},
+    {"Kitsunebi", "", "", "v2ray"},
+    {"Loon", "", "", "loon"},
+    {"Pharos", "", "", "mixed"},
+    {"Potatso", "", "", "mixed"},
+    {"Quantumult%20X", "", "", "quanx"},
+    {"Quantumult", "", "", "quan"},
+    {"Qv2ray", "", "", "v2ray"},
+    {"Shadowrocket", "", "", "mixed"},
+    {"Surfboard", "", "", "surfboard"},
+    {"Surge", "\\/([0-9.]+).*x86", "906", "surge", false, 4}, /// Surge for Mac (supports VMess)
+    {"Surge", "\\/([0-9.]+).*x86", "368", "surge", false, 3},
+    /// Surge for Mac (supports new rule types and Shadowsocks without plugin)
+    {"Surge", "\\/([0-9.]+)", "1419", "surge", false, 4}, /// Surge iOS 4 (first version)
+    {"Surge", "\\/([0-9.]+)", "900", "surge", false, 3}, /// Surge iOS 3 (approx)
+    {"Surge", "", "", "surge", false, 2}, /// any version of Surge as fallback
+    {"Trojan-Qt5", "", "", "trojan"},
+    {"V2rayU", "", "", "v2ray"},
+    {"V2RayX", "", "", "v2ray"}
 };
 
 bool verGreaterEqual(const std::string &src_ver, const std::string &target_ver) {
@@ -134,8 +136,8 @@ std::string getRuleset(RESPONSE_CALLBACK_ARGS) {
     int *status_code = &response.status_code;
     /// type: 1 for Surge, 2 for Quantumult X, 3 for Clash domain rule-provider, 4 for Clash ipcidr rule-provider, 5 for Surge DOMAIN-SET, 6 for Clash classical ruleset
     std::string url = urlSafeBase64Decode(getUrlArg(argument, "url")), type = getUrlArg(argument,
-                                                                                        "type"), group = urlSafeBase64Decode(
-            getUrlArg(argument, "group"));
+        "type"), group = urlSafeBase64Decode(
+        getUrlArg(argument, "group"));
     std::string output_content, dummy;
     int type_int = to_int(type, 0);
 
@@ -332,26 +334,26 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
     std::string argGroupName = getUrlArg(argument, "group"), argUploadPath = getUrlArg(argument, "upload_path");
     std::string argIncludeRemark = getUrlArg(argument, "include"), argExcludeRemark = getUrlArg(argument, "exclude");
     std::string argCustomGroups = urlSafeBase64Decode(
-            getUrlArg(argument, "groups")), argCustomRulesets = urlSafeBase64Decode(
-            getUrlArg(argument, "ruleset")), argExternalConfig = getUrlArg(argument, "config");
+        getUrlArg(argument, "groups")), argCustomRulesets = urlSafeBase64Decode(
+        getUrlArg(argument, "ruleset")), argExternalConfig = getUrlArg(argument, "config");
     std::string argDeviceID = getUrlArg(argument, "dev_id"), argFilename = getUrlArg(argument,
-                                                                                     "filename"), argUpdateInterval = getUrlArg(
-            argument, "interval"), argUpdateStrict = getUrlArg(argument, "strict");
+        "filename"), argUpdateInterval = getUrlArg(
+        argument, "interval"), argUpdateStrict = getUrlArg(argument, "strict");
     std::string argRenames = getUrlArg(argument, "rename"), argFilterScript = getUrlArg(argument, "filter_script");
 
     /// switches with default value
     tribool argUpload = getUrlArg(argument, "upload"), argEmoji = getUrlArg(argument, "emoji"), argAddEmoji = getUrlArg(
-            argument, "add_emoji"), argRemoveEmoji = getUrlArg(argument, "remove_emoji");
+        argument, "add_emoji"), argRemoveEmoji = getUrlArg(argument, "remove_emoji");
     tribool argAppendType = getUrlArg(argument, "append_type"), argTFO = getUrlArg(argument, "tfo"), argUDP = getUrlArg(
-            argument, "udp"), argGenNodeList = getUrlArg(argument, "list");
+        argument, "udp"), argGenNodeList = getUrlArg(argument, "list");
     tribool argSort = getUrlArg(argument, "sort"), argUseSortScript = getUrlArg(argument, "sort_script");
     tribool argGenClashScript = getUrlArg(argument, "script"), argEnableInsert = getUrlArg(argument, "insert");
     tribool argSkipCertVerify = getUrlArg(argument, "scv"), argFilterDeprecated = getUrlArg(argument,
-                                                                                            "fdn"), argExpandRulesets = getUrlArg(
-            argument, "expand"), argAppendUserinfo = getUrlArg(argument, "append_info");
+        "fdn"), argExpandRulesets = getUrlArg(
+        argument, "expand"), argAppendUserinfo = getUrlArg(argument, "append_info");
     tribool argPrependInsert = getUrlArg(argument, "prepend"), argGenClassicalRuleProvider = getUrlArg(argument,
-                                                                                                       "classic"), argTLS13 = getUrlArg(
-            argument, "tls13");
+        "classic"), argTLS13 = getUrlArg(
+        argument, "tls13");
 
     std::string base_content, output_content;
     ProxyGroupConfigs lCustomProxyGroups = global.customProxyGroups;
@@ -360,20 +362,23 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
     std::vector<RulesetContent> lRulesetContent;
     extra_settings ext;
     std::string subInfo, dummy;
-    int interval = !argUpdateInterval.empty() ? to_int(argUpdateInterval, global.updateInterval)
-                                              : global.updateInterval;
+    int interval = !argUpdateInterval.empty()
+                       ? to_int(argUpdateInterval, global.updateInterval)
+                       : global.updateInterval;
     bool authorized =
-            !global.APIMode || getUrlArg(argument, "token") == global.accessToken, strict = !argUpdateStrict.empty() ?
-                                                                                            argUpdateStrict == "true"
-                                                                                                                     : global.updateStrict;
+            !global.APIMode || getUrlArg(argument, "token") == global.accessToken, strict = !argUpdateStrict.empty()
+        ? argUpdateStrict == "true"
+        : global.updateStrict;
 
     if (std::find(gRegexBlacklist.cbegin(), gRegexBlacklist.cend(), argIncludeRemark) != gRegexBlacklist.cend() ||
         std::find(gRegexBlacklist.cbegin(), gRegexBlacklist.cend(), argExcludeRemark) != gRegexBlacklist.cend())
         return "Invalid request!";
 
     /// for external configuration
-    std::string lClashBase = global.clashBase, lSurgeBase = global.surgeBase, lMellowBase = global.mellowBase, lSurfboardBase = global.surfboardBase;
-    std::string lQuanBase = global.quanBase, lQuanXBase = global.quanXBase, lLoonBase = global.loonBase, lSSSubBase = global.SSSubBase;
+    std::string lClashBase = global.clashBase, lSurgeBase = global.surgeBase, lMellowBase = global.mellowBase,
+            lSurfboardBase = global.surfboardBase;
+    std::string lQuanBase = global.quanBase, lQuanXBase = global.quanXBase, lLoonBase = global.loonBase, lSSSubBase =
+            global.SSSubBase;
     std::string lSingBoxBase = global.singBoxBase;
 
     /// validate urls
@@ -386,20 +391,20 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
     }
 
     /// load request arguments as template variables
-//    string_array req_args = split(argument, "&");
-//    string_map req_arg_map;
-//    for(std::string &x : req_args)
-//    {
-//        string_size pos = x.find("=");
-//        if(pos == x.npos)
-//        {
-//            req_arg_map[x] = "";
-//            continue;
-//        }
-//        if(x.substr(0, pos) == "token")
-//            continue;
-//        req_arg_map[x.substr(0, pos)] = x.substr(pos + 1);
-//    }
+    //    string_array req_args = split(argument, "&");
+    //    string_map req_arg_map;
+    //    for(std::string &x : req_args)
+    //    {
+    //        string_size pos = x.find("=");
+    //        if(pos == x.npos)
+    //        {
+    //            req_arg_map[x] = "";
+    //            continue;
+    //        }
+    //        if(x.substr(0, pos) == "token")
+    //            continue;
+    //        req_arg_map[x.substr(0, pos)] = x.substr(pos + 1);
+    //    }
     string_map req_arg_map;
     for (auto &x: argument) {
         if (x.first == "token")
@@ -424,6 +429,7 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
         argExpandRulesets.define(true);
 
     ext.clash_proxies_style = global.clashProxiesStyle;
+    ext.clash_proxy_groups_style = global.clashProxyGroupsStyle;
 
     /// read preference from argument, assign global var if not in argument
     ext.tfo.define(argTFO).define(global.TFOFlag);
@@ -652,8 +658,7 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
                 ctx.eval(filterScript);
                 auto filter = (std::function<bool(const Proxy &)>) ctx.eval("filter");
                 nodes.erase(std::remove_if(nodes.begin(), nodes.end(), filter), nodes.end());
-            }
-            catch (qjs::exception) {
+            } catch (qjs::exception) {
                 script_print_stack(ctx);
             }
         }, global.scriptCleanContext);
@@ -686,7 +691,7 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
     std::string managed_url = base64Decode(getUrlArg(argument, "profile_data"));
     if (managed_url.empty())
         managed_url = global.managedConfigPrefix + "/sub?" + joinArguments(argument);
-    size_t found;
+
     //std::cerr<<"Generate target: ";
     proxy = parseProxy(global.proxyConfig);
     switch (hash_(argTarget)) {
@@ -734,9 +739,10 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
                     uploadGist("surge" + argSurgeVer, argUploadPath, output_content, true);
 
                 if (global.writeManagedConfig && !global.managedConfigPrefix.empty())
-                    output_content = "#!MANAGED-CONFIG " + managed_url +
-                                     (interval ? " interval=" + std::to_string(interval) : "") \
- + " strict=" + std::string(strict ? "true" : "false") + "\n\n" + output_content;
+                    output_content = "#!MANAGED-CONFIG " + managed_url + (interval
+                                                                              ? " interval=" + std::to_string(interval)
+                                                                              : "")
+                                     + " strict=" + std::string(strict ? "true" : "false") + "\n\n" + output_content;
             }
             break;
         case "surfboard"_hash:
@@ -752,9 +758,10 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
                 uploadGist("surfboard", argUploadPath, output_content, true);
 
             if (global.writeManagedConfig && !global.managedConfigPrefix.empty())
-                output_content =
-                        "#!MANAGED-CONFIG " + managed_url + (interval ? " interval=" + std::to_string(interval) : "") \
- + " strict=" + std::string(strict ? "true" : "false") + "\n\n" + output_content;
+                output_content = "#!MANAGED-CONFIG " + managed_url + (interval
+                                                                          ? " interval=" + std::to_string(interval)
+                                                                          : "")
+                                 + " strict=" + std::string(strict ? "true" : "false") + "\n\n" + output_content;
             break;
         case "mellow"_hash:
             writeLog(0, "Generate target: Mellow", LOG_LEVEL_INFO);
@@ -805,9 +812,21 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
             if (argUpload)
                 uploadGist("trojan", argUploadPath, output_content, false);
             break;
+        case "vless"_hash:
+            writeLog(0, "Generate target: vless", LOG_LEVEL_INFO);
+            output_content = proxyToSingle(nodes, 16, ext);
+            if (argUpload)
+                uploadGist("vless", argUploadPath, output_content, false);
+            break;
+        case "hysteria2"_hash:
+            writeLog(0, "Generate target: hysteria2", LOG_LEVEL_INFO);
+            output_content = proxyToSingle(nodes, 32, ext);
+            if (argUpload)
+                uploadGist("hysteria2", argUploadPath, output_content, false);
+            break;
         case "mixed"_hash:
             writeLog(0, "Generate target: Standard Subscription", LOG_LEVEL_INFO);
-            output_content = proxyToSingle(nodes, 15, ext);
+            output_content = proxyToSingle(nodes, 63, ext);
             if (argUpload)
                 uploadGist("sub", argUploadPath, output_content, false);
             break;
@@ -873,11 +892,6 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
             }
 
             output_content = proxyToSingBox(nodes, base_content, lRulesetContent, lCustomProxyGroups, ext);
-            found = output_content.find('\u0000');
-            while (found != std::string::npos) {
-                output_content.erase(found, 1);
-                found = output_content.find('\u0000', found);
-            }
 
             if (argUpload)
                 uploadGist("singbox", argUploadPath, output_content, false);
@@ -890,11 +904,10 @@ std::string subconverter(RESPONSE_CALLBACK_ARGS) {
     writeLog(0, "Generate completed.", LOG_LEVEL_INFO);
     if (!argFilename.empty())
         response.headers.emplace("Content-Disposition",
-                                 "attachment; filename=\"" + argFilename + "\"; filename*=utf-8''" +
-                                 urlEncode(argFilename));
+                                 "attachment; filename=\"" + argFilename + "\"; filename*=utf-8''" + urlEncode(
+                                     argFilename));
     return output_content;
 }
-
 
 std::string simpleToClashR(RESPONSE_CALLBACK_ARGS) {
     auto argument = joinArguments(request.argument);
@@ -922,9 +935,8 @@ std::string surgeConfToClash(RESPONSE_CALLBACK_ARGS) {
     string_array dummy_str_array;
     std::vector<Proxy> nodes;
     std::string base_content, url = argument.size() <= 5 ? "" : argument.substr(5);
-    const std::string proxygroup_name = global.clashUseNewField ? "proxy-groups"
-                                                                : "Proxy Group", rule_name = global.clashUseNewField
-                                                                                             ? "rules" : "Rule";
+    const std::string proxygroup_name = global.clashUseNewField ? "proxy-groups" : "Proxy Group", rule_name =
+            global.clashUseNewField ? "rules" : "Rule";
 
     ini.store_any_line = true;
 
@@ -987,8 +999,8 @@ std::string surgeConfToClash(RESPONSE_CALLBACK_ARGS) {
         if (dummy_str_array.empty())
             continue;
         type = dummy_str_array[0];
-        if (!(type == "select" || type == "url-test" || type == "fallback" ||
-              type == "load-balance")) //remove unsupported types
+        if (!(type == "select" || type == "url-test" || type == "fallback" || type == "load-balance"))
+            //remove unsupported types
             continue;
         singlegroup["name"] = name;
         singlegroup["type"] = type;
@@ -1100,8 +1112,8 @@ std::string surgeConfToClash(RESPONSE_CALLBACK_ARGS) {
                 lineSize = strLine.size();
                 if (lineSize && strLine[lineSize - 1] == '\r') //remove line break
                     strLine.erase(--lineSize);
-                if (!lineSize || strLine[0] == ';' || strLine[0] == '#' ||
-                    (lineSize >= 2 && strLine[0] == '/' && strLine[1] == '/')) //empty lines and comments are ignored
+                if (!lineSize || strLine[0] == ';' || strLine[0] == '#' || (
+                        lineSize >= 2 && strLine[0] == '/' && strLine[1] == '/')) //empty lines and comments are ignored
                     continue;
                 else if (!std::any_of(ClashRuleTypes.begin(), ClashRuleTypes.end(),
                                       [&strLine](const std::string &type) {
@@ -1115,8 +1127,9 @@ std::string surgeConfToClash(RESPONSE_CALLBACK_ARGS) {
             }
             ss.clear();
             continue;
-        } else if (!std::any_of(ClashRuleTypes.begin(), ClashRuleTypes.end(),
-                                [&strLine](const std::string &type) { return startsWith(strLine, type); }))
+        } else if (!std::any_of(ClashRuleTypes.begin(), ClashRuleTypes.end(), [&strLine](const std::string &type) {
+            return startsWith(strLine, type);
+        }))
             continue;
         rule.push_back(x);
     }
@@ -1244,8 +1257,8 @@ std::string subInfoToMessage(std::string subinfo) {
     using ull = unsigned long long;
     subinfo = replaceAllDistinct(subinfo, "; ", "&");
     std::string retdata, useddata = "N/A", totaldata = "N/A", expirydata = "N/A";
-    std::string upload = getUrlArg(subinfo, "upload"), download = getUrlArg(subinfo, "download"), total = getUrlArg(
-            subinfo, "total"), expire = getUrlArg(subinfo, "expire");
+    std::string upload = getUrlArg(subinfo, "upload"), download = getUrlArg(subinfo, "download"), total =
+            getUrlArg(subinfo, "total"), expire = getUrlArg(subinfo, "expire");
     ull used = to_number<ull>(upload, 0) + to_number<ull>(download, 0), tot = to_number<ull>(total, 0);
     auto expiry = to_number<time_t>(expire, 0);
     if (used != 0)
@@ -1302,7 +1315,7 @@ int simpleGenerator() {
         sections = new_targets;
         sections.shrink_to_fit();
     } else
-        //std::cerr<<"Generating all artifacts...\n";
+    //std::cerr<<"Generating all artifacts...\n";
         writeLog(0, "Generating all artifacts...", LOG_LEVEL_INFO);
 
     string_multimap allItems;

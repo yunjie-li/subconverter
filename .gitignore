@@ -7,3 +7,5 @@ scripts/quickjspp
 scripts/yaml-cpp
 .DS_Store
 src/.DS_Store
+
+build

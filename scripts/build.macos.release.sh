@@ -18,8 +18,10 @@ make -j6 > /dev/null
 sudo make install > /dev/null
 cd ..
 
-git clone https://github.com/ftk/quickjspp --depth=1
+git clone --no-checkout https://github.com/ftk/quickjspp.git
 cd quickjspp
+git fetch origin 0c00c48895919fc02da3f191a2da06addeb07f09
+git checkout 0c00c48895919fc02da3f191a2da06addeb07f09
 cmake -DCMAKE_BUILD_TYPE=Release .
 make quickjs -j6 > /dev/null
 sudo install -d /usr/local/lib/quickjs/
@@ -41,7 +43,7 @@ sudo install -d /usr/local/include/date/
 sudo install -m644 libcron/externals/date/include/date/* /usr/local/include/date/
 cd ..
 
-git clone https://github.com/ToruNiina/toml11 --branch="v3.7.1" --depth=1
+git clone https://github.com/ToruNiina/toml11 --branch="v4.3.0" --depth=1
 cd toml11
 cmake -DCMAKE_CXX_STANDARD=11 .
 sudo make install -j6 > /dev/null

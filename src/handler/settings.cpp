@@ -564,14 +564,14 @@ void readYAMLConf(YAML::Node &node)
     writeLog(0, "Load preference settings in YAML format completed.", LOG_LEVEL_INFO);
 }
 
-//template <class T, class... U>
-//void find_if_exist(const toml::value &v, const toml::key &k, T& target, U&&... args)
-//{
-//    if(v.contains(k)) target = toml::find<T>(v, k);
-//    if constexpr (sizeof...(args) > 0) find_if_exist(v, std::forward<U>(args)...);
-//}
+template <class T, class... U>
+void find_if_exist(const toml::value &v, const toml::value::key_type &k, T& target, U&&... args)
+{
+    if(v.contains(k)) target = toml::find<T>(v, k);
+    if constexpr (sizeof...(args) > 0) find_if_exist(v, std::forward<U>(args)...);
+}
 
-void operate_toml_kv_table(const std::vector<toml::table> &arr, const toml::key &key_name, const toml::key &value_name, std::function<void (const toml::value&, const toml::value&)> binary_op)
+void operate_toml_kv_table(const std::vector<toml::table> &arr, const toml::value::key_type &key_name, const toml::value::key_type &value_name, std::function<void (const toml::value&, const toml::value&)> binary_op)
 {
     for(const toml::table &table : arr)
     {
@@ -800,7 +800,7 @@ void readConf()
                 return readYAMLConf(yaml);
         }
         toml::value conf = parseToml(prefdata, global.prefPath);
-        if(!conf.is_uninitialized() && toml::find_or<int>(conf, "version", 0))
+        if(!conf.is_empty() && toml::find_or<int>(conf, "version", 0))
             return readTOMLConf(conf);
     }
     catch (YAML::Exception &e)
@@ -1209,7 +1209,7 @@ int loadExternalConfig(std::string &path, ExternalConfig &ext)
         if(yaml.size() && yaml["custom"].IsDefined())
             return loadExternalYAML(yaml, ext);
         toml::value conf = parseToml(base_content, path);
-        if(!conf.is_uninitialized() && toml::find_or<int>(conf, "version", 0))
+        if(!conf.is_empty() && toml::find_or<int>(conf, "version", 0))
             return loadExternalTOML(conf, ext);
     }
     catch (YAML::Exception &e)

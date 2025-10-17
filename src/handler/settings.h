@@ -49,7 +49,7 @@ struct Settings
     tribool UDPFlag, TFOFlag, skipCertVerify, TLS13Flag, enableInsert;
     bool enableSort = false, updateStrict = false;
     bool clashUseNewField = false, singBoxAddClashModes = true;
-    std::string clashProxiesStyle = "flow";
+    std::string clashProxiesStyle = "flow", clashProxyGroupsStyle = "block";
     std::string proxyConfig, proxyRuleset, proxySubscription;
     int updateInterval = 0;
     std::string sortScript, filterScript;
@@ -101,12 +101,12 @@ extern Settings global;
 
 int importItems(string_array &target, bool scope_limit = true);
 int loadExternalConfig(std::string &path, ExternalConfig &ext);
-template <class T, class... U>
-void find_if_exist(const toml::value &v, const toml::key &k, T& target, U&&... args)
-{
-    if(v.contains(k)) target = toml::find<T>(v, k);
-    if constexpr (sizeof...(args) > 0) find_if_exist(v, std::forward<U>(args)...);
-}
+//template <class T, class... U>
+//void find_if_exist(const toml::value &v, const toml::key &k, T& target, U&&... args)
+//{
+//    if(v.contains(k)) target = toml::find<T>(v, k);
+//    if constexpr (sizeof...(args) > 0) find_if_exist(v, std::forward<U>(args)...);
+//}
 template <class... Args>
 void parseGroupTimes(const std::string &src, Args... args)
 {

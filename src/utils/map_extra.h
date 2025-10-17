@@ -5,9 +5,16 @@
 #include <map>
 #include <string.h>
 
-struct strICaseComp {
-    bool operator()(const std::string &lhs, const std::string &rhs) const {
-        return strcasecmp(lhs.c_str(), rhs.c_str()) > 0;
+struct strICaseComp
+{
+    bool operator() (const std::string &lhs, const std::string &rhs) const
+    {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                            rhs.end(),
+                                            [](unsigned char c1, unsigned char c2)
+                                            {
+                                                return ::tolower(c1) < ::tolower(c2);
+                                            });
     }
 };
 

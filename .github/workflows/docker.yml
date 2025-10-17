@@ -1,11 +1,11 @@
 name: Publish Docker Image
-on:
+on: 
   push:
     branches: [ master ]
     tags:
       - '**'
 
-concurrency:
+concurrency: 
   group: ${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 

@@ -15,6 +15,8 @@
 | last-resort | 最后备用 | `[BACKUP]` | 良心云 |
 | cathy | Cathy 专用 | `[CATHY]` | Gary02 |
 
+当前五条源订阅均已加入“倍率上限 2x（排除 >2x）”操作，因此单独订阅和所有组合都只保留不超过 2 倍的节点；未标倍率的节点保留。新增源订阅时，在“节点操作”中沿用这一过滤，规则定义在 `multiplier-filter.json`。`apply_multiplier_filter.py` 会先备份，再为全部源订阅幂等添加该操作，不改变其他节点操作。
+
 在 Sub-Store 的组合订阅中调整成员、筛选和顺序即可换机场。保留上述组合内部名称及最后的“用途标记”重命名操作。国旗可以保留；同一物理节点出现在多个池时会拥有不同用途名称，连接信息保持不变。
 
 `setup_substore.py` 在创建组合前备份完整订阅和组合；只创建缺失的组合，不覆盖已有组合。首次配置需要设置 `SUBSTORE_ACCESS_FILE` 指向服务器外的私有 JSON 凭据文件，并显式指定 `--backup-dir`。不要把凭据文件或备份提交到仓库。
@@ -57,6 +59,6 @@ python3 /opt/sub/source/deploy/verify.py --private-dir /opt/sub/private
 
 ## 客户端差异
 
-共用 INI 按客户端选择规则表示：Clash 保留 GEOSITE，Loon 引用可转换的域名/IP 列表。Loon 端通过规则转换入口过滤不支持的规则类型；GEOSITE 中的少量正则规则无法保证完全等价。TUIC 只保留在 Clash 中，不能导出为 Loon 节点。空用途池使用 REJECT 占位，避免意外变成 DIRECT；需要在 Sub-Store 修复失效订阅。
+共用 INI 按客户端选择规则表示：Clash 保留 GEOSITE，Loon 引用可转换的域名/IP 列表。Loon 端通过规则转换入口过滤不支持的规则类型；中国域名大列表已是兼容的 DOMAIN-SUFFIX 文本，接口直接跳转到其公开源站下载，避免大文件重复中转。GEOSITE 中的少量正则规则无法保证完全等价。TUIC 只保留在 Clash 中，不能导出为 Loon 节点。空用途池使用 REJECT 占位，避免意外变成 DIRECT；需要在 Sub-Store 修复失效订阅。
 
 回退时恢复 Caddy 备份，将 `sc.wwmm.date` 上游切回 `127.0.0.1:18080`；原 `sub`、短链服务和 Redis 保留，不删除原数据。

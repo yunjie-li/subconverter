@@ -11,6 +11,7 @@ function showMode(next) {
   mode = next;
   $('public-panel').hidden = mode !== 'public';
   $('private-panel').hidden = mode !== 'private';
+  $('private-flow').hidden = mode !== 'private';
   $('public-tab').setAttribute('aria-pressed', String(mode === 'public'));
   $('private-tab').setAttribute('aria-pressed', String(mode === 'private'));
   $('result').hidden = true;
@@ -23,10 +24,21 @@ $('rule').addEventListener('change', () => {
   $('custom-rule').required = $('rule').value === 'custom';
 });
 $('private-target').addEventListener('change', () => {
+  const loon = $('private-target').value === 'loon';
+  $('private-settings-title').textContent = loon ? 'Loon 私有设置' : 'Clash 基础设置';
   $('private-note').textContent = $('private-target').value === 'loon'
-    ? '自动加入服务器上维护的个人证书、插件、Script 和 DNS。'
+    ? '沿用服务器保存的个人证书、插件、Script 和 DNS。'
     : '使用相同的六个用途池和共用规则，加入 Clash 基础设置。';
   $('result').hidden = true;
+});
+document.querySelectorAll('[data-private-target]').forEach((button) => {
+  button.addEventListener('click', () => {
+    $('private-target').value = button.dataset.privateTarget;
+    document.querySelectorAll('[data-private-target]').forEach((target) => {
+      target.setAttribute('aria-pressed', String(target === button));
+    });
+    $('private-target').dispatchEvent(new Event('change'));
+  });
 });
 async function api(path, options = {}) {
   const response = await fetch(path, { cache: 'no-store', ...options });
@@ -82,9 +94,21 @@ $('unlock-form').addEventListener('submit', (event) => {
     const data = await response.json();
     privateKey = key;
     $('key').value = '';
+    const descriptions = {
+      'WM 均衡': '日常负载均衡', '日常主用': '网页 / YouTube / Telegram',
+      'AI 优先': 'AI 优先使用的节点', 'AI 后备': 'AI 优先池不可用时接替',
+      '最后备用': '其他池不可用时兜底', 'Cathy 专用': '仅用于 Cathy 专用分组',
+    };
     $('pools').replaceChildren(...data.pools.map((name) => {
-      const element = document.createElement('div'); element.className = 'pool'; element.textContent = name; return element;
+      const element = document.createElement('div'); element.className = 'pool';
+      const check = document.createElement('span'); check.className = 'pool-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true');
+      const content = document.createElement('span');
+      const title = document.createElement('strong'); title.textContent = name;
+      const detail = document.createElement('small'); detail.textContent = descriptions[name] || '引用 Sub-Store 组合的最新输出';
+      content.append(title, detail); element.append(check, content); return element;
     }));
+    $('auth-state').textContent = '私有预设已解锁';
+    $('auth-state').classList.add('unlocked');
     $('unlock-form').hidden = true;
     $('unlocked').hidden = false;
     message('预设已读取。选择客户端后点击“重新生成并验证”。');
@@ -110,6 +134,8 @@ $('lock').addEventListener('click', () => {
   $('unlock-form').hidden = false;
   $('unlocked').hidden = true;
   $('pools').replaceChildren();
+  $('auth-state').textContent = '私有预设 · 需要密钥';
+  $('auth-state').classList.remove('unlocked');
   if (lastPrivateResult) { $('result').hidden = true; $('output').value = ''; $('download').removeAttribute('href'); }
   message('私有预设已锁定。');
 });

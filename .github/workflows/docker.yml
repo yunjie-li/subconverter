@@ -22,6 +22,7 @@ jobs:
           c++ -std=c++17 -Wall -Wextra -Werror -I src tests/test_public_address.cpp -o /tmp/test-public-address
           /tmp/test-public-address
           node --check deploy/web/app.js
+          node deploy/test_multiplier_filter.js
       - name: Build converter and web from this checkout
         run: |
           docker build --build-arg THREADS=2 -t wwmm/subconverter:20261105 .

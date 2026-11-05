@@ -2,30 +2,36 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>WWMM Sub · 订阅转换</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
 <body>
-<header><div class="brand"><span class="mark" aria-hidden="true">W</span>WWMM Sub</div><span class="host">订阅转换</span></header>
+<header class="top"><div class="top-inner"><a class="brand" href="/" aria-label="WWMM Sub 首页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m8 6 8 4M8 18l8-5M6 9v6"/><circle cx="6" cy="5" r="3"/><circle cx="18" cy="12" r="3"/><circle cx="6" cy="19" r="3"/></svg>WWMM Sub</a><a class="top-link" href="https://sub.wwmm.date" target="_blank" rel="noopener noreferrer">打开 Sub-Store <span aria-hidden="true">↗</span></a></div></header>
 <main>
   <nav aria-label="转换方式"><button type="button" id="public-tab" aria-pressed="true">公开转换</button><button type="button" id="private-tab" aria-pressed="false">我的预设</button></nav>
+  <div id="private-flow" class="flow" aria-label="使用流程" hidden><div><span class="step">1</span><p><strong>Sub-Store</strong><small>管理订阅与用途节点池</small></p></div><span class="flow-arrow" aria-hidden="true">→</span><div><span class="step">2</span><p><strong>WWMM Sub</strong><small>选择客户端，重新生成</small></p></div><span class="flow-arrow" aria-hidden="true">→</span><div><span class="step">3</span><p><strong>Loon / OpenClash</strong><small>使用固定链接更新配置</small></p></div></div>
   <section id="public-panel" aria-labelledby="public-title">
-    <h1 id="public-title">生成你的订阅配置</h1><p class="intro">填入订阅，选择客户端和规则。无需登录。</p>
+    <div class="section-heading"><div><h1 id="public-title">生成订阅配置</h1><p class="intro">填入订阅，选择客户端和规则。</p></div><span class="badge">公开转换 · 无需登录</span></div>
     <form id="public-form">
       <label>订阅链接<textarea id="subscriptions" rows="4" required placeholder="每行一条订阅地址，或粘贴节点分享链接" spellcheck="false"></textarea></label>
       <div class="columns"><label>客户端<select id="public-target"><option value="clash">Clash / OpenClash</option><option value="loon">Loon</option></select></label><label>远程规则<select id="rule"><option value="https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini">ACL4SSR · 通用规则</option><option value="https://raw.githubusercontent.com/yunjie-li/clash/main/clash-rule.ini">WWMM · 六个用途节点池</option><option value="custom">自定义规则地址</option></select></label></div>
       <label id="custom-rule-label" hidden>自定义 INI 地址<input id="custom-rule" type="url" placeholder="https://example.com/clash-rule.ini"></label>
-      <details><summary>节点筛选与选项</summary><div class="columns"><label>Include<input id="include" placeholder="可选正则表达式" spellcheck="false"></label><label>Exclude<input id="exclude" placeholder="可选正则表达式" spellcheck="false"></label></div><div class="checks"><label><input id="emoji" type="checkbox" checked>保留国旗</label><label><input id="udp" type="checkbox" checked>开启 UDP</label><label><input id="scv" type="checkbox">跳过节点证书验证</label></div></details>
-      <button class="primary" type="submit">生成并验证</button>
+      <details><summary>节点筛选与选项 <span aria-hidden="true">⌄</span></summary><div class="columns"><label>Include<input id="include" placeholder="可选正则表达式" spellcheck="false"></label><label>Exclude<input id="exclude" placeholder="可选正则表达式" spellcheck="false"></label></div><div class="checks"><label><input id="emoji" type="checkbox" checked>保留国旗</label><label><input id="udp" type="checkbox" checked>开启 UDP</label><label><input id="scv" type="checkbox">跳过节点证书验证</label></div></details>
+      <div class="action-row"><p class="hint">生成后，复制链接到对应客户端</p><button class="primary" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></svg>生成并验证</button></div>
     </form>
   </section>
   <section id="private-panel" aria-labelledby="private-title" hidden>
-    <h1 id="private-title">使用我的预设</h1><p class="intro">节点与组合在 Sub-Store 管理，这里直接生成完整配置。</p>
-    <form id="unlock-form"><label>私有预设密钥<input id="key" type="password" autocomplete="off" required placeholder="输入你的私有预设密钥"></label><button class="primary" type="submit">读取我的预设</button></form>
+    <div class="section-heading"><div><h1 id="private-title">生成我的订阅配置</h1><p class="intro">沿用保存的节点池与个人设置。</p></div><span class="auth-state" id="auth-state">私有预设 · 需要密钥</span></div>
+    <form id="unlock-form"><div class="unlock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><div><strong>读取你的私有预设</strong><p>输入预设密钥，即可生成包含个人设置的配置。</p></div></div><label>私有预设密钥<input id="key" type="password" autocomplete="off" required placeholder="输入你的私有预设密钥"></label><button class="primary" type="submit">读取我的预设</button></form>
     <div id="unlocked" hidden>
-      <div class="row"><h2>Sub-Store 用途节点池</h2><button id="lock" type="button" class="quiet">锁定预设</button></div><div id="pools" class="pools" aria-label="已引用的六个用途节点池"></div>
-      <p class="hint">引用六个组合的最新输出。各池的来源、节点和排序在 Sub-Store 修改。</p>
-      <form id="private-form"><label>生成客户端<select id="private-target"><option value="loon">Loon</option><option value="clash">Clash / OpenClash</option></select></label><div class="notice" id="private-note">自动加入服务器上维护的个人证书、插件、Script 和 DNS。</div><button class="primary" type="submit">重新生成并验证</button></form>
+      <div class="row pool-heading"><h2>Sub-Store 用途节点池</h2><span class="badge">最高 2x</span></div><div id="pools" class="pools" aria-label="已引用的六个用途节点池"></div>
+      <p class="hint">在 Sub-Store 调整各池的来源、节点和顺序，这里引用最新输出。</p>
+      <form id="private-form">
+        <div class="field-label" id="target-label">选择客户端</div><div class="targets" role="group" aria-labelledby="target-label"><button type="button" data-private-target="loon" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>Loon</button><button type="button" data-private-target="clash" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="12" width="18" height="8" rx="2"/><path d="M7 12V4m10 8V4M7 16h.01M11 16h.01"/></svg>Clash / OpenClash</button></div><input id="private-target" type="hidden" value="loon">
+        <div class="field-label">共用规则</div><div class="rule-row"><strong>WWMM · clash-rule.ini</strong><a href="https://github.com/yunjie-li/clash/blob/main/clash-rule.ini" target="_blank" rel="noopener noreferrer">GitHub 上的一份规则，两端共用 <span aria-hidden="true">↗</span></a></div>
+        <details class="personal-settings"><summary><strong id="private-settings-title">Loon 私有设置</strong><span>已保存 · 生成时自动合并 ⌄</span></summary><p id="private-note" class="settings-note">沿用服务器保存的个人证书、插件、Script 和 DNS。</p></details>
+        <div class="action-row"><button id="lock" type="button" class="quiet">锁定预设</button><button class="primary" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></svg>重新生成并验证</button></div>
+      </form>
     </div>
   </section>
   <p id="status" role="status" aria-live="polite"></p>
   <section id="result" class="result" hidden aria-label="生成结果"><div class="row"><h2 id="result-title">配置已生成</h2><span id="counts" class="hint"></span></div><label>客户端下载地址<input id="output" readonly spellcheck="false"></label><div class="row actions"><div><button type="button" id="copy">复制链接</button><a id="download" class="button" download>下载配置</a></div><span id="result-note" class="hint"></span></div></section>
-  <footer>个人预设需要独立密钥。请勿公开分享含有节点或个人证书的下载链接。</footer>
+  <footer><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 8 4v5c0 5-8 9-8 9S4 17 4 12V7l8-4Z"/><path d="m8 12 3 3 5-6"/></svg>私有设置受密钥保护。请妥善保管个人下载链接。</footer>
 </main>
 </body></html>

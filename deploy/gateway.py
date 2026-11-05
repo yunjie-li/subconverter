@@ -23,6 +23,9 @@ PUBLIC_ARGS = {'target', 'url', 'config', 'include', 'exclude', 'emoji', 'add_em
                'udp', 'tfo', 'scv', 'sort', 'list', 'new_name', 'append_type', 'fdn', 'expand',
                'classic', 'ver', 'interval', 'append_info', 'filename'}
 URI_SCHEMES = {'ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria2', 'hy2', 'tuic', 'anytls', 'socks5'}
+# This public list contains only DOMAIN-SUFFIX rules, already understood by Loon.
+# Redirect its 110k entries to the source instead of relaying megabytes through the VPS.
+DIRECT_SURGE_RULES = {'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/classical/cn.list'}
 TARGETS = {'clash', 'clashr', 'loon', 'surge', 'surfboard', 'mellow', 'quan', 'quanx', 'ss',
            'ssr', 'vless', 'trojan', 'hysteria2', 'mixed', 'sssub', 'singbox', 'v2ray', 'ssd', 'auto'}
 LIMIT = threading.BoundedSemaphore(4)
@@ -221,6 +224,8 @@ class Handler(BaseHTTPRequestHandler):
                 for prefix in ('clash-classic:', 'clash-domain:', 'clash-ipcidr:', 'surge:', 'quanx:'):
                     if decoded.startswith(prefix): decoded = decoded[len(prefix):]; break
                 validate_http(decoded)
+                if values['type'] == '1' and decoded in DIRECT_SURGE_RULES:
+                    return self.send(302, b'', 'text/plain; charset=utf-8', {'Location': decoded})
                 body, _ = convert('/getruleset?' + urlencode(values))
                 if values['type'] == '1': body = compatible_rules(body)
                 return self.send(200, body, 'text/plain; charset=utf-8')

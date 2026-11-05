@@ -1,11 +1,13 @@
 import importlib.util
+import base64
 import json
 from pathlib import Path
 import tempfile
 import threading
 import unittest
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
+from urllib.parse import urlencode
 
 spec = importlib.util.spec_from_file_location('gateway', Path(__file__).with_name('gateway.py'))
 gateway = importlib.util.module_from_spec(spec)
@@ -94,6 +96,21 @@ class GatewayTests(unittest.TestCase):
         self.assertNotIn(b'DOMAIN-REGEX', filtered)
         self.assertIn(b'DOMAIN-SUFFIX,example.com', filtered)
         self.assertIn(b'IP-CIDR6', filtered)
+
+    def test_large_compatible_cn_rules_redirect_without_relaying(self):
+        class NoRedirect(HTTPRedirectHandler):
+            def redirect_request(self, *args, **kwargs): return None
+        source = next(iter(gateway.DIRECT_SURGE_RULES))
+        encoded = base64.urlsafe_b64encode(('clash-classic:' + source).encode()).decode().rstrip('=')
+        url = self.base + '/getruleset?' + urlencode({'type': '1', 'url': encoded})
+        with self.assertRaises(HTTPError) as result:
+            build_opener(NoRedirect()).open(url)
+        self.assertEqual(result.exception.code, 302)
+        self.assertEqual(result.exception.headers['Location'], source)
+        result.exception.close()
+        self.assertFalse(self.calls)
+        self.assertEqual(self.request('/getruleset?' + urlencode({'type': '6', 'url': encoded}))[0], 200)
+        self.assertTrue(self.calls)
 
 
 if __name__ == '__main__': unittest.main()

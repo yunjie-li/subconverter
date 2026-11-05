@@ -76,6 +76,22 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertTrue(self.calls[-1][1])
 
+    def test_preset_key_rotation_preserves_long_download_keys(self):
+        previous = self.config['admin_key']
+        chosen = 'Example#2026!'
+        self.config['admin_key'] = chosen
+        gateway.SETTINGS_FILE.write_text(json.dumps(self.config))
+        self.assertEqual(self.request('/api/presets', key=chosen)[0], 200)
+        self.assertEqual(self.request('/api/presets', key=previous)[0], 401)
+        self.assertEqual(self.request('/my/sub?target=loon&token=' + self.config['tokens']['loon'])[0], 200)
+        self.config['admin_key'] = 'x' * 11
+        gateway.SETTINGS_FILE.write_text(json.dumps(self.config))
+        with self.assertRaises(ValueError): gateway.settings()
+        self.config['admin_key'] = chosen
+        self.config['tokens']['loon'] = 'x' * 31
+        gateway.SETTINGS_FILE.write_text(json.dumps(self.config))
+        with self.assertRaises(ValueError): gateway.settings()
+
     def test_public_routes_cannot_read_private_or_local_files(self):
         for path in ['/render?path=private/loon-base.conf', '/getprofile?name=private/loon.ini', '/private/settings.json', '/get?url=/etc/passwd', '/api/settings']:
             self.assertEqual(self.request(path)[0], 404)

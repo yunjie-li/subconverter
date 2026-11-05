@@ -47,7 +47,7 @@ cd /opt/sub
 docker compose -f wwmm-compose.yml up -d
 ```
 
-首次部署必须先配置私有文件。`settings.json` 的 `admin_key` 和 `tokens.loon`、`tokens.clash` 使用分别生成的随机长密钥（至少 32 字符），`backend_token` 只供服务内部调用；两份档案的 `profile_token` 使用内部密钥。重置某个客户端下载密钥只需修改 `settings.json` 对应 `tokens` 字段，旧链接立即失效，不需要更换内部密钥。
+首次部署必须先配置私有文件。`settings.json` 的 `admin_key` 为私有预设入口密钥（至少 12 字符）；`tokens.loon`、`tokens.clash` 使用分别生成的随机长密钥（至少 32 字符），`backend_token` 只供服务内部调用；两份档案的 `profile_token` 使用内部密钥。重置某个客户端下载密钥只需修改 `settings.json` 对应 `tokens` 字段，旧链接立即失效，不需要更换内部密钥。
 
 公网只反向代理 `127.0.0.1:18082`。公共和私有转换器没有宿主端口、没有共用网络或数据卷。公开接口仅转发公共转换和规则转换；私有接口固定读取两份预设，拒绝替换 `url`、`config`、文件路径或重复参数。客户端密钥不能读取管理预设。程序不记录请求 URL，个人配置响应禁止缓存；下载链接本身仍须作为密码保管，不要交给第三方短链服务。
 

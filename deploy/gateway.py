@@ -39,7 +39,7 @@ class BusyError(Exception):
 
 def settings():
     data = json.loads(SETTINGS_FILE.read_text())
-    if len(data.get('admin_key', '')) < 32 or any(len(data.get('tokens', {}).get(t, '')) < 32 for t in ('loon', 'clash')):
+    if len(data.get('admin_key', '')) < 12 or any(len(data.get('tokens', {}).get(t, '')) < 32 for t in ('loon', 'clash')):
         raise ValueError('Private preset credentials are not configured')
     return data
 

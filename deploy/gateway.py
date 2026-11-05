@@ -246,7 +246,7 @@ class Handler(BaseHTTPRequestHandler):
                 kind = {'index.html': 'text/html; charset=utf-8', 'app.js': 'text/javascript; charset=utf-8', 'style.css': 'text/css; charset=utf-8'}[name]
                 return self.send(200, (ROOT/'web'/name).read_bytes(), kind)
             if path == '/healthz' and self.command in ('GET', 'HEAD'):
-                return self.send(200, {'status': 'ok', 'version': 'wwmm-20261105'})
+                return self.send(200, {'status': 'ok', 'version': 'wwmm-20261105-egern'})
             if path == '/sub' and self.command in ('GET', 'HEAD'):
                 query = public_query(values)
                 if values.get('target') == 'egern':
@@ -254,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
                 body, headers = convert(query)
                 if values.get('target') == 'loon': body = adapt_loon(body)
                 if values.get('target') == 'egern':
-                    body = adapt_egern(body, nodes_only=values.get('list') == 'true')
+                    body = adapt_egern(body, update_url=ORIGIN + '/sub?' + urlencode(values), nodes_only=values.get('list') == 'true')
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)
             if path == '/egern/rules' and self.command in ('GET', 'HEAD'):
                 if set(values) != {'url'}: raise ValueError('Invalid rule request')

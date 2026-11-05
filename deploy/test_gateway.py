@@ -140,6 +140,7 @@ class GatewayTests(unittest.TestCase):
         code, raw, _ = self.request('/sub?target=egern&url=https://example.com/sub&emoji=true')
         self.assertEqual(code, 200)
         self.assertIn(b'policy_groups:', raw)
+        self.assertIn('target=egern', gateway.egern.load(raw)['auto_update']['url'])
         self.assertIn('target=clash', self.calls[-1][0])
         self.assertIn('emoji=true', self.calls[-1][0])
         self.assertFalse(self.calls[-1][1])

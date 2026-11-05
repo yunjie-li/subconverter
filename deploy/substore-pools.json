@@ -1,0 +1,217 @@
+[
+  {
+    "name": "wm-balance",
+    "displayName": "WM 均衡",
+    "subscriptions": [
+      "BW",
+      "69YUN"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "(?i)^(?:(?:(?:\\uD83C[\\uDDE6-\\uDDFF]){2}\\s*)*WWMM-|(?=.*(?:香港|Hong[ _-]?Kong|🇭🇰|(?:^|[^A-Za-z])HK(?=[^A-Za-z]|$)))(?:(?:\\uD83C[\\uDDE6-\\uDDFF]){2}\\s*)*69YUN)"
+          ],
+          "keep": true
+        },
+        "customName": "默认用途筛选，可按需要调整"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[WM] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  },
+  {
+    "name": "daily-main",
+    "displayName": "日常主用",
+    "subscriptions": [
+      "BW",
+      "69YUN"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[DAILY] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  },
+  {
+    "name": "ai-primary",
+    "displayName": "AI 优先",
+    "subscriptions": [
+      "BW",
+      "69YUN"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "(?i)^(?:(?:(?:\\uD83C[\\uDDE6-\\uDDFF]){2}\\s*)*WWMM-|(?=.*(?:日本|东京|東京|大阪|Japan|🇯🇵|(?:^|[^A-Za-z])JP(?=[^A-Za-z]|$)))(?:(?:\\uD83C[\\uDDE6-\\uDDFF]){2}\\s*)*69YUN)"
+          ],
+          "keep": true
+        },
+        "customName": "默认用途筛选，可按需要调整"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[AI] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  },
+  {
+    "name": "ai-backup",
+    "displayName": "AI 后备",
+    "subscriptions": [
+      "MESL"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[AI-BACKUP] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  },
+  {
+    "name": "last-resort",
+    "displayName": "最后备用",
+    "subscriptions": [
+      "良心云"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[BACKUP] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  },
+  {
+    "name": "cathy",
+    "displayName": "Cathy 专用",
+    "subscriptions": [
+      "Gary02"
+    ],
+    "ignoreFailedRemoteSub": true,
+    "mergeSources": true,
+    "process": [
+      {
+        "type": "Regex Filter",
+        "args": {
+          "regex": [
+            "到期|过期|過期|流量|套餐|官网|官網|剩余|剩餘|有效期|更新订阅|回国|回國"
+          ],
+          "keep": false
+        },
+        "customName": "过滤流量、到期和回国提示"
+      },
+      {
+        "type": "Regex Rename Operator",
+        "args": [
+          {
+            "expr": "^",
+            "now": "[CATHY] "
+          }
+        ],
+        "customName": "用途标记，请保留此操作"
+      }
+    ],
+    "remark": "WWMM 用途池：来源和筛选在这里调整；用途标记供共用 INI 识别。"
+  }
+]

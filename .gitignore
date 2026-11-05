@@ -9,3 +9,6 @@ scripts/yaml-cpp
 src/.DS_Store
 
 build
+__pycache__/
+*.pyc
+.codebase-memory/

@@ -2259,32 +2259,32 @@ proxyToLoon(std::vector<Proxy> &nodes, const std::string &base_conf,
                     proxy += ",skip-cert-verify=" + std::string(scv.get() ? "true" : "false");
                 break;
             case ProxyType::VLESS:
-                if (flow != "xtls-rprx-vision") {
-                    if (transproto == "ws") {
-                        proxy = "VLESS," + hostname + "," + port + ",\"" + id + "\"" +
-                            ",path=" + path + ",host=" + host + ",transport=" + transproto +
-                            ",udp=" + (udp.get() ? "true" : "false") + ",over-tls=" + (
-                                tlssecure ? "true" : "false") + ",sni=" + sni;
-                    } else {
-                        continue;
-                    }
-                } else {
-                    proxy = "VLESS," + hostname + "," + port + ",\"" + id + "\",flow=" + flow + ",public-key=\"" + pk +
-                            "\",short-id=" + shortId + ",udp=" + (udp.get() ? "true" : "false") + ",over-tls=" + (
-                                tlssecure ? "true" : "false") + ",sni=" + sni;
-                }
+                // Loon supports ordinary TCP VLESS as well as WebSocket and Vision.
+                if (transproto != "tcp" && transproto != "ws")
+                    continue;
+                if (!flow.empty() && flow != "xtls-rprx-vision")
+                    continue;
+                if (flow == "xtls-rprx-vision" && transproto != "tcp")
+                    continue;
 
-                switch (hash_(transproto)) {
-                    case "tcp"_hash:
-                        proxy += ",transport=tcp";
-                        break;
-                    default:
-                        if (transproto != "ws") {
-                            continue;
-                        } else {
-                            break;;
-                        }
+                proxy = "VLESS," + hostname + "," + port + ",\"" + id + "\",transport=" + transproto;
+                if (transproto == "ws")
+                    proxy += ",path=" + path + ",host=" + host;
+                if (!flow.empty())
+                    proxy += ",flow=" + flow;
+                if (!pk.empty()) {
+                    proxy += ",public-key=\"" + pk + "\"";
+                    if (!shortId.empty())
+                        proxy += ",short-id=" + shortId;
                 }
+                proxy += ",udp=" + std::string(udp.get() ? "true" : "false") +
+                         ",over-tls=" + std::string(tlssecure ? "true" : "false");
+                if (!sni.empty())
+                    proxy += ",sni=" + sni;
+                if (x.Fingerprint == "chrome")
+                    proxy += ",tls-profile=chrome";
+                else if (x.Fingerprint == "safari" || x.Fingerprint == "ios")
+                    proxy += ",tls-profile=safari-ios18";
                 if (!scv.is_undef())
                     proxy += ",skip-cert-verify=" + std::string(scv.get() ? "true" : "false");
                 break;
@@ -2306,6 +2306,13 @@ proxyToLoon(std::vector<Proxy> &nodes, const std::string &base_conf,
                 proxy = "trojan," + hostname + "," + port + ",\"" + password + "\"";
                 if (!host.empty())
                     proxy += ",tls-name=" + host;
+                if (!scv.is_undef())
+                    proxy += ",skip-cert-verify=" + std::string(scv.get() ? "true" : "false");
+                break;
+            case ProxyType::AnyTLS:
+                proxy = "AnyTLS," + hostname + "," + port + ",\"" + password + "\"";
+                if (!sni.empty())
+                    proxy += ",sni=" + sni;
                 if (!scv.is_undef())
                     proxy += ",skip-cert-verify=" + std::string(scv.get() ? "true" : "false");
                 break;
@@ -2451,14 +2458,14 @@ proxyToLoon(std::vector<Proxy> &nodes, const std::string &base_conf,
                 group += ",algorithm=" +
                         std::string(x.Strategy == BalanceStrategy::RoundRobin ? "round-robin" : "pcc");
                 if (x.Timeout > 0)
-                    group += ",max-timeout=" + std::to_string(x.Timeout);
+                    group += ",max-timeout=" + std::to_string(static_cast<long long>(x.Timeout) * 1000);
             }
             if (x.Type == ProxyGroupType::URLTest) {
                 if (x.Tolerance > 0)
                     group += ",tolerance=" + std::to_string(x.Tolerance);
             }
             if (x.Type == ProxyGroupType::Fallback)
-                group += ",max-timeout=" + std::to_string(x.Timeout);
+                group += ",max-timeout=" + std::to_string(static_cast<long long>(x.Timeout) * 1000);
         }
 
         ini.set("{NONAME}", x.Name + " = " + group); //insert order

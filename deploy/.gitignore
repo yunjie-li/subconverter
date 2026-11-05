@@ -1,0 +1,4 @@
+private/
+backups/
+*.log
+__pycache__/

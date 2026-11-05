@@ -1,0 +1,62 @@
+name: wwmm-sub
+services:
+  web:
+    image: wwmm/sub-web:20261105
+    container_name: wwmm-sub-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18082:8080"
+    volumes:
+      - ./private:/data:ro
+    environment:
+      PUBLIC_ORIGIN: https://sc.wwmm.date
+    networks: [public, private]
+    mem_limit: 128m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: local
+      options: {max-size: "5m", max-file: "2"}
+  public-converter:
+    image: wwmm/subconverter:20261105
+    container_name: wwmm-sub-public
+    restart: unless-stopped
+    environment:
+      API_MODE: "true"
+      PUBLIC_NETWORK_ONLY: "true"
+      VERIFY_UPSTREAM_TLS: "true"
+    volumes:
+      - ./public/pref.ini:/base/pref.ini:ro
+      - ./public/loon-base.conf:/base/base/loon-safe.conf:ro
+      - ./public/clash-base.yaml:/base/base/clash-safe.yaml:ro
+    networks: [public]
+    mem_limit: 192m
+    read_only: true
+    tmpfs:
+      - /base/cache:uid=10001,gid=10001,size=128m
+      - /tmp:uid=10001,gid=10001,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: {driver: none}
+  private-converter:
+    image: wwmm/subconverter:20261105
+    container_name: wwmm-sub-private
+    restart: unless-stopped
+    environment:
+      VERIFY_UPSTREAM_TLS: "true"
+    volumes:
+      - ./private:/base/private:ro
+      - ./private/pref.ini:/base/pref.ini:ro
+    networks: [private]
+    mem_limit: 256m
+    read_only: true
+    tmpfs:
+      - /base/cache:uid=10001,gid=10001,size=128m
+      - /tmp:uid=10001,gid=10001,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: {driver: none}
+networks:
+  public: {}
+  private: {}

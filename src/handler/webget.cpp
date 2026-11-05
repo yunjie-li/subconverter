@@ -4,6 +4,12 @@
 //#include <mutex>
 #include <thread>
 #include <atomic>
+#include <cstdlib>
+#ifndef _WIN32
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include "utils/public_address.h"
+#endif
 
 #include <curl/curl.h>
 
@@ -32,6 +38,19 @@ RWLock cache_rw_lock;
 
 //std::string user_agent_str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36";
 static auto user_agent_str = "subconverter/" VERSION " cURL/" LIBCURL_VERSION;
+
+#ifndef _WIN32
+static curl_socket_t publicSocket(void *, curlsocktype, struct curl_sockaddr *address)
+{
+    bool allowed = false;
+    if(address->family == AF_INET)
+        allowed = publicIPv4(ntohl(reinterpret_cast<sockaddr_in *>(&address->addr)->sin_addr.s_addr));
+    else if(address->family == AF_INET6)
+        allowed = publicIPv6(reinterpret_cast<sockaddr_in6 *>(&address->addr)->sin6_addr.s6_addr);
+    // Inspect the actual resolved destination on every new connection, including redirects.
+    return allowed ? socket(address->family, address->socktype, address->protocol) : CURL_SOCKET_BAD;
+}
+#endif
 
 struct curl_progress_data
 {
@@ -129,8 +148,17 @@ static inline void curl_set_common_options(CURL *curl_handle, const char *url, c
     curl_easy_setopt(curl_handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl_handle, CURLOPT_MAXREDIRS, 20L);
-    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    const char *verify = std::getenv("VERIFY_UPSTREAM_TLS");
+    const bool verify_tls = verify && std::string(verify) == "true";
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, verify_tls ? 1L : 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, verify_tls ? 2L : 0L);
+#if LIBCURL_VERSION_NUM >= 0x075500
+    curl_easy_setopt(curl_handle, CURLOPT_PROTOCOLS_STR, "http,https");
+    curl_easy_setopt(curl_handle, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+#else
+    curl_easy_setopt(curl_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+    curl_easy_setopt(curl_handle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+#endif
     curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 15L);
     curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, "");
     if(data)
@@ -154,6 +182,10 @@ static int curlGet(const FetchArgument &argument, FetchResult &result)
     curl_init();
 
     curl_handle = curl_easy_init();
+#ifndef _WIN32
+    if(const char *value = std::getenv("PUBLIC_NETWORK_ONLY"); value && std::string(value) == "true")
+        curl_easy_setopt(curl_handle, CURLOPT_OPENSOCKETFUNCTION, publicSocket);
+#endif
     if(!argument.proxy.empty())
     {
         if(startsWith(argument.proxy, "cors:"))

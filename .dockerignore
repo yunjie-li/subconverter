@@ -1,0 +1,8 @@
+.git
+.codebase-memory
+deploy/private
+deploy/backups
+**/__pycache__
+**/*.pyc
+**/.env
+**/node_modules

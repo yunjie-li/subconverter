@@ -46,7 +46,7 @@ def main():
     original = (directory/'loon-base.conf').read_text()
     cert = re.search(r'^ca-p12\s*=\s*(.+)$', original, re.I | re.M).group(1).strip()
     output = {}
-    for target in ['loon', 'clash']:
+    for target in ['loon', 'clash', 'egern']:
         code, raw, headers = request('/my/sub?' + urlencode({'target': target, 'token': settings['tokens'][target]}))
         check('private ' + target + ' download', code == 200)
         check('private download not cached', 'no-store' in headers.get('Cache-Control', ''))
@@ -58,6 +58,12 @@ def main():
             check('scripts preserved', '[Script]' in text)
             check('Loon timeout uses milliseconds', 'max-timeout=5000' in text)
             check('Loon contains no GEOSITE', not re.search(r'^GEOSITE,', text, re.M))
+        elif target == 'egern':
+            import egern
+            profile = egern.validate(egern.load(raw))
+            check('Egern Smart policies', any('smart' in g for g in profile['policy_groups']))
+            check('Egern self update', profile['auto_update']['url'].startswith(base + '/my/sub?'))
+            check('Egern does not inherit Loon certificate', cert not in text)
         else:
             check('Clash has no Loon certificate', cert not in text and 'ca-p12' not in text.lower())
     synthetic = 'vless://11111111-1111-4111-8111-111111111111@example.com:443?encryption=none&security=tls&type=tcp&sni=example.com#Synthetic'

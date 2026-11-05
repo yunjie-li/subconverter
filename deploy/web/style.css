@@ -161,3 +161,7 @@ footer svg { width: .95rem; height: .95rem; }
   section, .pools, .pool, .rule-row { border-color: #8b8b91; }
   button:focus-visible, a:focus-visible, summary:focus-visible { outline-color: #0057b7; }
 }
+
+#egern-editor { margin-top: 1.5rem; }
+#egern-settings { min-height: 18rem; }
+@media (max-width: 600px) { .targets { flex-wrap: wrap; } .targets button { min-width: 40%; } }

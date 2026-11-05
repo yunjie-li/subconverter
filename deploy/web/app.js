@@ -2,6 +2,8 @@ const $ = (id) => document.getElementById(id);
 let privateKey = '';
 let mode = 'public';
 let lastPrivateResult = false;
+let savedEgernSettings = '';
+const clientNames = { loon: 'Loon', clash: 'Clash / OpenClash', egern: 'Egern' };
 
 function message(text, error = false) {
   $('status').textContent = text;
@@ -23,11 +25,11 @@ $('rule').addEventListener('change', () => {
   $('custom-rule').required = $('rule').value === 'custom';
 });
 $('private-target').addEventListener('change', () => {
-  const loon = $('private-target').value === 'loon';
-  $('private-settings-title').textContent = loon ? 'Loon 私有设置' : 'Clash 基础设置';
-  $('private-note').textContent = $('private-target').value === 'loon'
-    ? '沿用服务器保存的个人证书、插件、Script 和 DNS。'
-    : '使用相同的六个用途池和共用规则，加入 Clash 基础设置。';
+  const target = $('private-target').value;
+  $('private-settings-title').textContent = {loon: 'Loon 私有设置', clash: 'Clash 基础设置', egern: 'Egern · Smart 设置'}[target];
+  $('private-note').textContent = {loon: '沿用服务器保存的个人证书、插件、Script 和 DNS。', clash: '使用相同的六个用途池和共用规则，加入 Clash 基础设置。', egern: '共用节点池与分流规则，日常和 AI 使用 Smart，外层保留故转与最后备用。'}[target];
+  $('egern-editor').hidden = target !== 'egern';
+  if (target === 'egern' && privateKey && !savedEgernSettings) loadEgernSettings().catch((error) => message(error.message, true));
   $('result').hidden = true;
 });
 document.querySelectorAll('[data-private-target]').forEach((button) => {
@@ -60,7 +62,7 @@ function result(url, target, info, personal) {
   lastPrivateResult = personal;
   $('output').value = url;
   $('download').href = url;
-  $('result-title').textContent = (target === 'loon' ? 'Loon' : 'Clash / OpenClash') + ' 配置已生成';
+  $('result-title').textContent = clientNames[target] + ' 配置已生成';
   $('counts').textContent = info && info.nodes ? `${info.nodes} 个节点${info.groups ? ` · ${info.groups} 个策略组` : ''}` : '';
   $('result-note').textContent = personal ? '固定私有链接；请勿公开分享' : '使用你填写的订阅和规则';
   $('result').hidden = false;
@@ -111,6 +113,7 @@ $('unlock-form').addEventListener('submit', (event) => {
     $('auth-state').classList.add('unlocked');
     $('unlock-form').hidden = true;
     $('unlocked').hidden = false;
+    $('private-target').dispatchEvent(new Event('change'));
     message('预设已解锁，选择客户端后即可重新生成。');
   });
 });
@@ -119,6 +122,7 @@ $('private-form').addEventListener('submit', (event) => {
   busy(event.currentTarget, async () => {
     message('正在读取六个用途池并生成配置，请稍候…');
     const target = $('private-target').value;
+    if (target === 'egern' && $('egern-settings').value !== savedEgernSettings) throw new Error('请先保存 Egern 设置，或重新加载已保存的内容。');
     const response = await api('/api/generate', {
       method: 'POST', headers: { Authorization: 'Bearer ' + privateKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ target }),
@@ -126,11 +130,14 @@ $('private-form').addEventListener('submit', (event) => {
     const data = await response.json();
     result(data.download, target, data, true);
     const missing = data.pool_counts && !data.pool_counts['AI-BACKUP'];
-    message(missing ? '已生成。AI 后备池当前没有可用节点，请在 Sub-Store 检查 MESL 订阅；其他池继续按故转顺序使用。' : '已生成并验证。客户端继续使用这条固定链接获取最新配置。');
+    const warnings = data.warnings && data.warnings.length ? ' Egern 已略过进程名等不支持的规则，详情见下载文件顶部注释。' : '';
+    message((missing ? '已生成。AI 后备池当前没有可用节点，请在 Sub-Store 检查 MESL 订阅；其他池继续按故转顺序使用。' : '已生成并验证。客户端继续使用这条固定链接获取最新配置。') + warnings);
   });
 });
 $('lock').addEventListener('click', () => {
   privateKey = '';
+  savedEgernSettings = '';
+  $('egern-settings').value = '';
   $('unlock-form').hidden = false;
   $('unlocked').hidden = true;
   $('pools').replaceChildren();
@@ -144,3 +151,31 @@ $('copy').addEventListener('click', async () => {
   catch (_) { $('output').focus(); $('output').select(); message('请长按复制，或按 ⌘C / Ctrl+C。'); }
 });
 if (location.hash === '#my') showMode('private');
+
+async function loadEgernSettings() {
+  const key = privateKey;
+  const response = await api('/api/egern-settings', {headers: {Authorization: 'Bearer ' + key}});
+  const data = await response.json();
+  if (key !== privateKey) return;
+  savedEgernSettings = data.yaml;
+  $('egern-settings').value = data.yaml;
+  $('egern-settings-state').textContent = '已读取服务器设置';
+}
+$('egern-settings').addEventListener('input', () => {
+  $('egern-settings-state').textContent = $('egern-settings').value === savedEgernSettings ? '已保存' : '有未保存的修改';
+});
+$('reload-egern-settings').addEventListener('click', () => loadEgernSettings().catch((error) => message(error.message, true)));
+$('save-egern-settings').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  const yaml = $('egern-settings').value;
+  const key = privateKey;
+  try {
+    await api('/api/egern-settings', {method: 'POST', headers: {Authorization: 'Bearer ' + key, 'Content-Type': 'application/json'}, body: JSON.stringify({yaml})});
+    if (key !== privateKey) return;
+    savedEgernSettings = yaml;
+    $('egern-settings-state').textContent = $('egern-settings').value === yaml ? '已保存' : '有未保存的修改';
+    message('Egern 设置已保存；重新生成或客户端更新配置时生效。');
+  } catch (error) { message(error.message, true); }
+  finally { button.disabled = false; }
+});

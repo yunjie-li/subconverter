@@ -3,9 +3,11 @@ import argparse
 from datetime import datetime, timezone
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from substore_config import ensure_operation_ids
 
 
 def main():
@@ -29,8 +31,13 @@ def main():
     fd = os.open(backup, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     with os.fdopen(fd, 'w') as file: json.dump({'subscriptions': subs, 'collections': collections}, file, ensure_ascii=False)
     for sub in subs:
+        existing = next((item for item in sub.get('process', []) if item.get('customName') == operation['customName']), None)
+        replacement = deepcopy(operation)
+        if existing and existing.get('id'):
+            replacement['id'] = existing['id']
         process = [item for item in sub.get('process', []) if item.get('customName') != operation['customName']]
-        process.append(operation)
+        process.append(replacement)
+        process = ensure_operation_ids(process)
         if args.apply:
             path = '/api/sub/' + quote(sub['name'], safe='')
             api(path, 'PATCH', {'process': process})

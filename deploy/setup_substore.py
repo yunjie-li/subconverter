@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from substore_config import ensure_operation_ids
 
 
 def main():
@@ -34,6 +35,7 @@ def main():
     available = {item['name'] for item in subscriptions}
     pools = json.loads(Path(__file__).with_name('substore-pools.json').read_text())
     for pool in pools:
+        pool['process'] = ensure_operation_ids(pool['process'])
         if set(pool['subscriptions']) - available: raise RuntimeError('A required source subscription is missing: ' + pool['displayName'])
         if pool['name'] in existing:
             print('Preserved existing pool:', pool['displayName'])

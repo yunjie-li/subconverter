@@ -19,11 +19,13 @@ class GatewayTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.config = {'admin_key': 'admin-example-key-' * 3,
                        'backend_token': 'backend-internal-key-' * 3,
-                       'tokens': {'loon': 'loon-example-key-' * 3, 'clash': 'clash-example-key-' * 3},
+                       'tokens': {'loon': 'loon-example-key-' * 3, 'clash': 'clash-example-key-' * 3, 'egern': 'egern-example-key-' * 3},
                        'pools': ['WM 均衡', '日常主用', 'AI 优先', 'AI 后备', '最后备用', 'Cathy 专用']}
         p = Path(self.temp.name) / 'settings.json'
         p.write_text(json.dumps(self.config))
         gateway.SETTINGS_FILE = p
+        gateway.EGERN_FILE = Path(self.temp.name) / 'egern-base.yaml'
+        gateway.EGERN_FILE.write_text((Path(__file__).with_name('egern-base.yaml')).read_text())
         self.server = gateway.Server(('127.0.0.1', 0), gateway.Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.base = 'http://127.0.0.1:' + str(self.server.server_port)
@@ -127,6 +129,66 @@ class GatewayTests(unittest.TestCase):
         self.assertFalse(self.calls)
         self.assertEqual(self.request('/getruleset?' + urlencode({'type': '6', 'url': encoded}))[0], 200)
         self.assertTrue(self.calls)
+
+
+    def egern_intermediate(self, path, private=False):
+        self.calls.append((path, private))
+        return b'proxies:\n  - {name: "[AI] synthetic", type: vless, server: example.com, port: 443, uuid: id, tls: true}\nproxy-groups:\n  - {name: Group, type: select, proxies: ["[AI] synthetic"]}\nrules: ["MATCH,Group"]\n', {}
+
+    def test_egern_public_and_private_generation_share_clash_ini(self):
+        gateway.convert = self.egern_intermediate
+        code, raw, _ = self.request('/sub?target=egern&url=https://example.com/sub&emoji=true')
+        self.assertEqual(code, 200)
+        self.assertIn(b'policy_groups:', raw)
+        self.assertIn('target=clash', self.calls[-1][0])
+        self.assertIn('emoji=true', self.calls[-1][0])
+        self.assertFalse(self.calls[-1][1])
+        token = self.config['tokens']['egern']
+        self.assertEqual(self.request('/my/sub?target=egern&token=' + self.config['tokens']['loon'])[0], 401)
+        self.assertEqual(self.request('/my/sub?target=egern&token=' + token + '&url=https://example.com')[0], 400)
+        code, raw, headers = self.request('/my/sub?target=egern&token=' + token)
+        self.assertEqual(code, 200)
+        self.assertIn('private%2Fclash.ini', self.calls[-1][0])
+        self.assertTrue(self.calls[-1][1])
+        profile = gateway.egern.load(raw)
+        self.assertIn('target=egern', profile['auto_update']['url'])
+        self.assertNotIn(self.config['backend_token'].encode(), raw)
+        self.assertIn('no-store', headers['Cache-Control'])
+        code, raw, _ = self.request('/api/generate', 'POST', {'target': 'egern'}, self.config['admin_key'])
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(raw)['pool_counts'], {'AI': 1})
+
+    def test_egern_template_editor_requires_admin_and_preserves_invalid_input(self):
+        self.assertEqual(self.request('/api/egern-settings')[0], 401)
+        self.assertEqual(self.request('/api/egern-settings', key=self.config['tokens']['egern'])[0], 401)
+        key = self.config['admin_key']
+        code, raw, _ = self.request('/api/egern-settings', key=key)
+        self.assertEqual(code, 200)
+        original = gateway.EGERN_FILE.read_bytes()
+        for value in ['proxies: []', 'rules: []', '_wwmm: {priorities: {MESL: -1}}', 'invalid: [', '!!python/object/apply:os.system [echo no]']:
+            self.assertEqual(self.request('/api/egern-settings', 'POST', {'yaml': value}, key)[0], 400)
+            self.assertEqual(gateway.EGERN_FILE.read_bytes(), original)
+        value = 'ipv6: true\nmodules: []\n_wwmm:\n  priorities: {MESL: 0.8}\n'
+        self.assertEqual(self.request('/api/egern-settings', 'POST', {'yaml': value}, key)[0], 200)
+        self.assertEqual(gateway.EGERN_FILE.read_text(), value)
+        self.assertEqual(gateway.EGERN_FILE.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.request('/egern/base.yaml')[0], 404)
+
+    def test_egern_remote_rules_use_public_converter_and_block_local_paths(self):
+        encoded = lambda text: base64.urlsafe_b64encode(text.encode()).decode().rstrip('=')
+        for source in ['surge:file:///etc/passwd', 'surge:http://127.0.0.1/private', 'clash-classic:http://private-converter:25500/config']:
+            self.assertEqual(self.request('/egern/rules?' + urlencode({'url': encoded(source)}))[0], 400)
+        self.assertFalse(self.calls)
+        def convert(path, private=False):
+            self.calls.append((path, private))
+            return b'payload:\n - DOMAIN-SUFFIX,example.com\n - DOMAIN-REGEX,^ad\n - IP-CIDR,10.0.0.0/8,no-resolve\n', {}
+        gateway.convert = convert
+        code, raw, _ = self.request('/egern/rules?' + urlencode({'url': encoded('surge:https://example.com/rules.list')}))
+        self.assertEqual(code, 200)
+        self.assertIn(b'domain_suffix_set:', raw)
+        self.assertIn(b'domain_regex_set:', raw)
+        self.assertIn('type=6', self.calls[-1][0])
+        self.assertFalse(self.calls[-1][1])
 
 
 if __name__ == '__main__': unittest.main()

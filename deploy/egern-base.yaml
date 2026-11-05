@@ -1,0 +1,16 @@
+# Egern-only settings. Nodes, business rules and group membership come from the shared INI.
+ipv6: false
+allow_external_connections: false
+proxy_latency_test_url: https://www.gstatic.com/generate_204
+direct_latency_test_url: https://www.apple.com/library/test/success.html
+dns:
+  bootstrap: [system, 223.5.5.5, 119.29.29.29]
+  upstreams:
+    encrypted: [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
+  forward:
+    - domain_wildcard: {match: '*', value: encrypted}
+modules: []
+_wwmm:
+  smart_groups: ['🔯 AI优先', '🔯 AI后备']
+  daily_smart: {'🔯 日常故转': '⚖️ WM均衡'}
+  priorities: {}

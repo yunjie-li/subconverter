@@ -10,12 +10,16 @@ from pathlib import Path
 import re
 import threading
 import time
+import tempfile
+import egern
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent
 SETTINGS_FILE = Path(os.environ.get('SETTINGS_FILE', '/data/settings.json'))
+EGERN_FILE = Path(os.environ.get('EGERN_FILE', '/egern/base.yaml'))
+PRIVATE_TARGETS = ('loon', 'clash', 'egern')
 ORIGIN = os.environ.get('PUBLIC_ORIGIN', 'https://sc.wwmm.date').rstrip('/')
 PUBLIC_BACKEND = os.environ.get('PUBLIC_BACKEND', 'http://public-converter:25500')
 PRIVATE_BACKEND = os.environ.get('PRIVATE_BACKEND', 'http://private-converter:25500')
@@ -27,7 +31,7 @@ URI_SCHEMES = {'ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria2', 'hy2', 'tui
 # Redirect its 110k entries to the source instead of relaying megabytes through the VPS.
 DIRECT_SURGE_RULES = {'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/classical/cn.list'}
 TARGETS = {'clash', 'clashr', 'loon', 'surge', 'surfboard', 'mellow', 'quan', 'quanx', 'ss',
-           'ssr', 'vless', 'trojan', 'hysteria2', 'mixed', 'sssub', 'singbox', 'v2ray', 'ssd', 'auto'}
+           'ssr', 'vless', 'trojan', 'hysteria2', 'mixed', 'sssub', 'singbox', 'v2ray', 'ssd', 'auto', 'egern'}
 LIMIT = threading.BoundedSemaphore(4)
 AUTH_FAILURES = defaultdict(deque)
 AUTH_LOCK = threading.Lock()
@@ -39,7 +43,7 @@ class BusyError(Exception):
 
 def settings():
     data = json.loads(SETTINGS_FILE.read_text())
-    if len(data.get('admin_key', '')) < 12 or any(len(data.get('tokens', {}).get(t, '')) < 32 for t in ('loon', 'clash')):
+    if len(data.get('admin_key', '')) < 12 or any(len(data.get('tokens', {}).get(t, '')) < 32 for t in PRIVATE_TARGETS):
         raise ValueError('Private preset credentials are not configured')
     return data
 
@@ -97,6 +101,8 @@ def convert(path, private=False):
 
 def summarize(body, target):
     text = body.decode('utf-8-sig')
+    if target == 'egern':
+        return egern.summary(body)
     if target == 'loon':
         section = ''
         counts = {'nodes': 0, 'groups': 0}
@@ -150,6 +156,29 @@ def adapt_loon(body):
     return ('\n'.join(lines) + '\n').encode()
 
 
+def egern_base(private=False):
+    path = EGERN_FILE if private else ROOT/'egern-base.yaml'
+    return egern.validate_base(path.read_bytes())
+
+
+def adapt_egern(body, private=False, update_url=None, nodes_only=False):
+    return egern.render(body, ORIGIN, egern_base(private), update_url, nodes_only)
+
+
+def save_egern_base(raw):
+    egern.validate_base(raw)
+    # Dedicated writable Egern volume; the existing Loon certificates remain read-only.
+    with tempfile.NamedTemporaryFile(mode='w', dir=EGERN_FILE.parent, delete=False) as file:
+        temporary = Path(file.name)
+        try:
+            file.write(raw); file.flush(); os.fsync(file.fileno())
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+    try: os.replace(temporary, EGERN_FILE)
+    finally: temporary.unlink(missing_ok=True)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'WWMM-Sub'
 
@@ -188,11 +217,17 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def private_profile(self, target, data):
-        return '/getprofile?' + urlencode({'name': 'private/' + target + '.ini', 'token': data.get('backend_token', data['tokens'][target])})
+        return '/getprofile?' + urlencode({'name': 'private/' + ('clash' if target == 'egern' else target) + '.ini', 'token': data.get('backend_token', data['tokens'][target])})
 
     def preset_info(self, data):
         return {'pools': data.get('pools', []), 'downloads': {
-            t: ORIGIN + '/my/sub?' + urlencode({'target': t, 'token': data['tokens'][t]}) for t in ('loon', 'clash')}}
+            t: ORIGIN + '/my/sub?' + urlencode({'target': t, 'token': data['tokens'][t]}) for t in PRIVATE_TARGETS}}
+
+    def private_output(self, target, data):
+        body, headers = convert(self.private_profile(target, data), True)
+        if target == 'loon': body = adapt_loon(body)
+        if target == 'egern': body = adapt_egern(body, True, self.preset_info(data)['downloads'][target])
+        return body, headers
 
     def do_GET(self): self.dispatch()
     def do_HEAD(self): self.dispatch()
@@ -213,9 +248,24 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/healthz' and self.command in ('GET', 'HEAD'):
                 return self.send(200, {'status': 'ok', 'version': 'wwmm-20261105'})
             if path == '/sub' and self.command in ('GET', 'HEAD'):
-                body, headers = convert(public_query(values))
+                query = public_query(values)
+                if values.get('target') == 'egern':
+                    query = public_query({**values, 'target': 'clash', 'new_name': 'true', 'expand': 'true'})
+                body, headers = convert(query)
                 if values.get('target') == 'loon': body = adapt_loon(body)
+                if values.get('target') == 'egern':
+                    body = adapt_egern(body, nodes_only=values.get('list') == 'true')
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)
+            if path == '/egern/rules' and self.command in ('GET', 'HEAD'):
+                if set(values) != {'url'}: raise ValueError('Invalid rule request')
+                encoded = values['url']
+                decoded = base64.urlsafe_b64decode(encoded + '=' * (-len(encoded) % 4)).decode()
+                source = decoded
+                for prefix in ('clash-classic:', 'clash-domain:', 'clash-ipcidr:', 'surge:', 'quanx:'):
+                    if source.startswith(prefix): source = source[len(prefix):]; break
+                validate_http(source)
+                raw, _ = convert('/getruleset?' + urlencode({'type': '6', 'url': encoded}))
+                return self.send(200, egern.ruleset(raw), 'application/yaml; charset=utf-8')
             if path == '/getruleset' and self.command in ('GET', 'HEAD'):
                 if set(values) - {'type', 'url', 'group'} or values.get('type') not in ('1', '2', '3', '4', '5', '6'):
                     raise ValueError('规则参数无效')
@@ -230,33 +280,43 @@ class Handler(BaseHTTPRequestHandler):
                 if values['type'] == '1': body = compatible_rules(body)
                 return self.send(200, body, 'text/plain; charset=utf-8')
             if path == '/my/sub' and self.command in ('GET', 'HEAD'):
-                if set(values) - {'target', 'token'} or values.get('target') not in ('loon', 'clash'):
+                if set(values) - {'target', 'token'} or values.get('target') not in PRIVATE_TARGETS:
                     raise ValueError('私有配置只接受客户端类型和下载密钥')
                 data, target = settings(), values['target']
                 if not self.authenticated(data['tokens'][target], values.get('token', '')): return
-                body, headers = convert(self.private_profile(target, data), True)
-                if target == 'loon': body = adapt_loon(body)
+                body, headers = self.private_output(target, data)
                 summarize(body, target)
                 headers['Content-Disposition'] = 'attachment; filename="wwmm-' + target + ('.conf"' if target == 'loon' else '.yaml"')
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)
-            if path in ('/api/presets', '/api/generate'):
+            if path in ('/api/presets', '/api/generate', '/api/egern-settings'):
                 if values: raise ValueError('管理密钥必须通过请求头传递')
                 data = settings()
                 key = self.headers.get('Authorization', '').removeprefix('Bearer ')
                 if not self.authenticated(data['admin_key'], key): return
+                if path == '/api/egern-settings':
+                    if self.command == 'GET':
+                        return self.send(200, {'yaml': EGERN_FILE.read_text()})
+                    if self.command == 'POST':
+                        length = int(self.headers.get('Content-Length', '0'))
+                        if not 0 < length <= 131072: raise ValueError('Invalid settings size')
+                        payload = json.loads(self.rfile.read(length))
+                        if not isinstance(payload, dict) or set(payload) != {'yaml'} or not isinstance(payload['yaml'], str):
+                            raise ValueError('Invalid settings body')
+                        save_egern_base(payload['yaml'])
+                        return self.send(200, {'saved': True})
                 if path == '/api/presets' and self.command == 'GET':
                     return self.send(200, self.preset_info(data))
                 if path == '/api/generate' and self.command == 'POST':
                     length = int(self.headers.get('Content-Length', '0'))
                     if not 0 < length <= 1024: raise ValueError('请求内容无效')
                     body = json.loads(self.rfile.read(length))
-                    if not isinstance(body, dict) or set(body) != {'target'} or body['target'] not in ('loon', 'clash'):
-                        raise ValueError('请选择 Loon 或 Clash')
+                    if not isinstance(body, dict) or set(body) != {'target'} or body['target'] not in PRIVATE_TARGETS:
+                        raise ValueError('请选择 Loon、Clash 或 Egern')
                     target = body['target']
-                    result, _ = convert(self.private_profile(target, data), True)
+                    result, _ = self.private_output(target, data)
                     return self.send(200, {**summarize(result, target), 'download': self.preset_info(data)['downloads'][target]})
             return self.send(404, {'error': 'Not found'})
-        except (ValueError, TypeError, UnicodeError, json.JSONDecodeError):
+        except (ValueError, TypeError, KeyError, RecursionError, UnicodeError, egern.yaml.YAMLError, json.JSONDecodeError):
             self.send(400, {'error': '请求或生成结果无效，请检查订阅、参数和规则'})
         except (HTTPError, URLError, TimeoutError, OSError):
             self.send(502, {'error': '转换失败，请检查订阅是否可用后重试'})

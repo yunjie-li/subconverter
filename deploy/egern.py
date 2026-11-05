@@ -9,6 +9,7 @@ import base64
 import re
 from urllib.parse import urlencode
 import yaml
+from egern_icons import policy_icon
 
 Loader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
 Dumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
@@ -227,7 +228,7 @@ def render(raw, origin, base=None, update_url=None, nodes_only=False):
         if g['type'] not in types: raise ValueError('Unsupported Egern policy group')
         kind = 'smart' if g['name'] in options.get('smart_groups', []) or (g['type'] == 'url-test' and options.get('smart_auto_test', True)) else types[g['type']]
         value = {'name': g['name'], 'policies': g.get('proxies') or ['REJECT']}
-        if g.get('icon'): value['icon'] = g['icon']
+        value['icon'] = policy_icon(g['name'], kind, g.get('icon'), options.get('icons'))
         if kind in {'auto_test', 'fallback', 'load_balance'}:
             value.update(picked(g, {'interval': 'interval', 'tolerance': 'tolerance'}))
             if g.get('url'): value['latency_test_url'] = g['url']
@@ -239,7 +240,8 @@ def render(raw, origin, base=None, update_url=None, nodes_only=False):
         if outer not in by_name and pool not in by_name: continue
         if outer not in by_name or pool not in by_name: raise ValueError('Missing daily Smart pool')
         smart_name = '🧠 日常智能'
-        groups.append({'smart': {'name': smart_name, 'policies': deepcopy(by_name[pool]['policies'])}})
+        groups.append({'smart': {'name': smart_name, 'policies': deepcopy(by_name[pool]['policies']),
+                                  'icon': policy_icon(smart_name, 'smart', overrides=options.get('icons'))}})
         by_name[outer]['policies'] = [smart_name if n == pool else n for n in by_name[outer]['policies']]
         # Keep the original load-balance group reachable as a manual alternative.
         for group in groups:
@@ -251,6 +253,7 @@ def render(raw, origin, base=None, update_url=None, nodes_only=False):
     validate(profile)
     note = '# Generated from the shared INI for Egern.\n'
     if skipped: note += '# Egern has no equivalent for host-only rules: ' + ', '.join(f'{k}={v}' for k, v in skipped.items()) + '\n'
+    note += '# Policy icons: Qure Color by Koolson (https://github.com/Koolson/Qure).\n'
     return note.encode() + dump(profile)
 
 
@@ -259,7 +262,7 @@ def validate_base(raw):
     if any(k in base for k in ('proxies', 'policy_groups', 'rules', 'auto_update')):
         raise ValueError('Nodes, groups, rules and updates are generated from the shared INI')
     opts = base.get('_wwmm', {})
-    if not isinstance(opts, dict) or set(opts) - {'smart_groups', 'daily_smart', 'priorities', 'smart_auto_test'}:
+    if not isinstance(opts, dict) or set(opts) - {'smart_groups', 'daily_smart', 'priorities', 'smart_auto_test', 'icons'}:
         raise ValueError('Invalid Smart settings')
     if not isinstance(opts.get('smart_groups', []), list) or any(not isinstance(x, str) for x in opts.get('smart_groups', [])):
         raise ValueError('Invalid Smart groups')
@@ -272,6 +275,10 @@ def validate_base(raw):
         if not isinstance(key, str) or not isinstance(value, (float, int)) or isinstance(value, bool) or not 0 <= value <= 1000:
             raise ValueError('Invalid Smart priority coefficient')
     if 'smart_auto_test' in opts and not isinstance(opts['smart_auto_test'], bool): raise ValueError('Invalid Smart flag')
+    icons = opts.get('icons', {})
+    if not isinstance(icons, dict) or any(not isinstance(k, str) or not isinstance(v, str) or len(v) > 2048
+            or not (v.startswith('https://') or re.fullmatch(r'[a-z0-9.]+', v)) for k, v in icons.items()):
+        raise ValueError('Icons must be HTTPS URLs or SF Symbols names')
     for key in ('modules', 'scriptings'):
         if key in base and not isinstance(base[key], list): raise ValueError('Invalid Egern resource list')
     return base

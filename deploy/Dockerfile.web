@@ -3,7 +3,7 @@ RUN adduser -D -u 10001 web
 WORKDIR /app
 COPY deploy/requirements-web.txt /app/requirements-web.txt
 RUN pip install --no-cache-dir -r requirements-web.txt
-COPY deploy/gateway.py deploy/egern.py deploy/egern-base.yaml /app/
+COPY deploy/gateway.py deploy/egern.py deploy/egern_icons.py deploy/egern-base.yaml /app/
 COPY deploy/web /app/web
 USER web
 EXPOSE 8080

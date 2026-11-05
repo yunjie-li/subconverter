@@ -94,3 +94,18 @@ _wwmm:
 远程规则经 `/egern/rules` 转为 Egern YAML 规则集，保留域名正则；GEOSITE 和非国家 GEOIP 转换为对应的 MetaCubeX 远程列表，国家 GEOIP 原样表达。当前 INI 中 46 条进程名和 1 条源端口规则无法用 Egern 的已文档化规则表达，因此略过，并在生成文件顶部和网页中明确提示。其他未知节点、传输层或规则类型会拒绝生成，避免静默漏节点。
 
 公开和私有的完整 Egern 配置都包含指向各自生成地址的 `auto_update`；节点列表不含该项。公开 Egern 转换支持仅节点列表 `list=true`；完整配置中的常规自动测速组默认使用 Smart，故转与负载均衡保持原类型。公开转换使用仓库内的无私有信息模板，不能读取个人 Egern 设置。
+
+### Egern 图标
+
+所有生成的策略组（包括新增日常 Smart）自动补齐 [Koolson/Qure Color](https://github.com/Koolson/Qure) 图标：服务使用对应标志，地区使用旗帜，Smart、故转、负载均衡和手选使用策略图标。保留共用配置已有图标。新增分组会自动使用按类型选择的默认图标。
+
+图标引用作者仓库固定版本，遵循其个人/非商业参考用途及注明出处的说明；不把图片复制进私有配置或重新打包。客户端需要联网获取远程图标。此映射仅作用于 Egern，不改变分流、节点选择或两端已有配置。
+
+可在网页的 Egern 专用设置中按完整组名覆盖图标（HTTPS 图片地址或 Egern 支持的 SF Symbols 名称）：
+
+```yaml
+_wwmm:
+  # 保留已有 smart_groups、daily_smart、priorities 等设置，只增加 icons。
+  icons:
+    '🧠 日常智能': sparkles
+```

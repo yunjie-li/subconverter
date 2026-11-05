@@ -1,5 +1,6 @@
 import unittest
 import egern
+from egern_icons import policy_icon
 
 
 class EgernTests(unittest.TestCase):
@@ -69,8 +70,20 @@ class EgernTests(unittest.TestCase):
         self.assertEqual(groups['Select']['select']['policies'], ['Daily', 'WM'])
         self.assertEqual(result['auto_update']['interval'], 86400)
         self.assertNotIn('_wwmm', result)
+        self.assertTrue(all(next(iter(g.values())).get('icon') for g in result['policy_groups']))
         source['proxy-groups'][0]['proxies'] = ['Select']
         with self.assertRaises(ValueError): egern.render(egern.dump(source), 'https://sc.example')
+
+
+    def test_icons_preserve_explicit_choices_and_allow_future_groups(self):
+        self.assertTrue(policy_icon('📹 YouTube', 'select').endswith('/YouTube.png'))
+        self.assertTrue(policy_icon('🔯 AI日本', 'fallback').endswith('/Japan.png'))
+        self.assertTrue(policy_icon('🧠 日常智能', 'smart').endswith('/Magic.png'))
+        self.assertTrue(policy_icon('new group', 'fallback').endswith('/Auto.png'))
+        self.assertEqual(policy_icon('group', 'select', 'https://example.com/original.png'), 'https://example.com/original.png')
+        self.assertEqual(policy_icon('group', 'select', 'original', {'group': 'sparkles'}), 'sparkles')
+        egern.validate_base('_wwmm:\n  icons: {"🧠 日常智能": sparkles}\n')
+        with self.assertRaises(ValueError): egern.validate_base('_wwmm: {icons: {group: "file:///private"}}')
 
 
 if __name__ == '__main__': unittest.main()

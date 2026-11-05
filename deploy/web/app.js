@@ -11,7 +11,6 @@ function showMode(next) {
   mode = next;
   $('public-panel').hidden = mode !== 'public';
   $('private-panel').hidden = mode !== 'private';
-  $('private-flow').hidden = mode !== 'private';
   $('public-tab').setAttribute('aria-pressed', String(mode === 'public'));
   $('private-tab').setAttribute('aria-pressed', String(mode === 'private'));
   $('result').hidden = true;
@@ -52,9 +51,10 @@ async function api(path, options = {}) {
 async function busy(form, action) {
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
+  form.setAttribute('aria-busy', 'true');
   $('result').hidden = true;
   try { await action(); } catch (error) { message(error.message, true); }
-  finally { button.disabled = false; }
+  finally { button.disabled = false; form.removeAttribute('aria-busy'); }
 }
 function result(url, target, info, personal) {
   lastPrivateResult = personal;
@@ -107,11 +107,11 @@ $('unlock-form').addEventListener('submit', (event) => {
       const detail = document.createElement('small'); detail.textContent = descriptions[name] || '引用 Sub-Store 组合的最新输出';
       content.append(title, detail); element.append(check, content); return element;
     }));
-    $('auth-state').textContent = '私有预设已解锁';
+    $('auth-state').textContent = '已解锁';
     $('auth-state').classList.add('unlocked');
     $('unlock-form').hidden = true;
     $('unlocked').hidden = false;
-    message('预设已读取。选择客户端后点击“重新生成并验证”。');
+    message('预设已解锁，选择客户端后即可重新生成。');
   });
 });
 $('private-form').addEventListener('submit', (event) => {
@@ -134,7 +134,7 @@ $('lock').addEventListener('click', () => {
   $('unlock-form').hidden = false;
   $('unlocked').hidden = true;
   $('pools').replaceChildren();
-  $('auth-state').textContent = '私有预设 · 需要密钥';
+  $('auth-state').textContent = '需要密钥';
   $('auth-state').classList.remove('unlocked');
   if (lastPrivateResult) { $('result').hidden = true; $('output').value = ''; $('download').removeAttribute('href'); }
   message('私有预设已锁定。');

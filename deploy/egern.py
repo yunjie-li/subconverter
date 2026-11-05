@@ -19,8 +19,7 @@ TYPES = {'DOMAIN': 'domain', 'DOMAIN-SUFFIX': 'domain_suffix', 'DOMAIN-KEYWORD':
          'NETWORK': 'protocol', 'URL-REGEX': 'url_regex', 'USER-AGENT': 'user_agent'}
 # These Clash host-process rules have no equivalent in Egern's documented rule schema.
 HOST_ONLY = {'PROCESS-NAME', 'PROCESS-PATH', 'PROCESS-NAME-REGEX', 'PROCESS-PATH-REGEX', 'SRC-PORT', 'IN-PORT'}
-PRIVATE_NETS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8',
-                '169.254.0.0/16', '100.64.0.0/10', '::1/128', 'fc00::/7', 'fe80::/10']
+
 
 
 def load(raw):
@@ -149,7 +148,7 @@ def rules(lines, origin, providers=None):
         value, policy = rest.rsplit(',', 1)
         item = {'match': value, 'policy': policy}
         if kind in TYPES:
-            target = TYPES[kind]
+            target = 'ip_cidr6' if kind == 'IP-CIDR' and ':' in value else TYPES[kind]
             if no_resolve and target in {'ip_cidr', 'ip_cidr6', 'asn'}: item['no_resolve'] = True
             if target == 'protocol': item['match'] = value.lower()
             result.append({target: item})
@@ -157,10 +156,6 @@ def rules(lines, origin, providers=None):
             if kind == 'GEOIP' and COUNTRIES.fullmatch(value):
                 if no_resolve: item['no_resolve'] = True
                 result.append({'geoip': item}); continue
-            if kind == 'GEOIP' and value.lower() == 'private':
-                for net in PRIVATE_NETS:
-                    result.append({'ip_cidr6' if ':' in net else 'ip_cidr': {'match': net, 'policy': policy, 'no_resolve': True}})
-                continue
             if kind == 'RULE-SET':
                 source = (providers or {}).get(value, {}).get('url')
                 if not source: raise ValueError('Missing remote rule provider')
@@ -189,7 +184,7 @@ def ruleset(raw):
         kind, value = line.split(',', 1)
         if kind in HOST_ONLY: continue
         if kind not in TYPES: raise ValueError('Unsupported rule-set entry: ' + kind)
-        target = TYPES[kind] + '_set'
+        target = ('ip_cidr6' if kind == 'IP-CIDR' and ':' in value else TYPES[kind]) + '_set'
         out.setdefault(target, []).append(value)
     # IP rule providers used by the shared INI must not trigger DNS lookups.
     if any(x in out for x in ['ip_cidr_set', 'ip_cidr6_set', 'asn_set']): out['no_resolve'] = True

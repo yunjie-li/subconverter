@@ -43,10 +43,15 @@ class EgernTests(unittest.TestCase):
         self.assertEqual(rules[3]['domain_regex']['match'], '^a{1,2}\\.com$')
         self.assertEqual(rules[-1], {'default': {'policy': 'Video'}})
         self.assertEqual(skipped, {'PROCESS-NAME': 1})
-        out = egern.load(egern.ruleset(b'payload:\n  - DOMAIN-REGEX,^ads\\.\n  - DOMAIN-SUFFIX,example.com\n  - IP-CIDR,10.0.0.0/8,no-resolve\n'))
+        out = egern.load(egern.ruleset(b'payload:\n  - DOMAIN-REGEX,^ads\\.\n  - DOMAIN-SUFFIX,example.com\n  - IP-CIDR,10.0.0.0/8,no-resolve\n  - IP-CIDR,fc00::/7\n'))
         self.assertEqual(out['domain_regex_set'], ['^ads\\.'])
         self.assertEqual(out['domain_suffix_set'], ['example.com'])
         self.assertTrue(out['no_resolve'])
+        self.assertEqual(out['ip_cidr6_set'], ['fc00::/7'])
+        import base64
+        from urllib.parse import urlsplit, parse_qs
+        encoded = parse_qs(urlsplit(rules[-2]['rule_set']['match']).query)['url'][0]
+        self.assertTrue(base64.urlsafe_b64decode(encoded + '=' * (-len(encoded) % 4)).decode().endswith('/geoip/classical/private.list'))
         with self.assertRaises(ValueError): egern.rules(['UNKNOWN,x,Video'], 'https://example.com')
 
     def test_smart_is_inside_pools_and_last_resort_order_survives(self):

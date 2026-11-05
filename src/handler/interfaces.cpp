@@ -194,10 +194,9 @@ std::string getRuleset(RESPONSE_CALLBACK_ARGS) {
         output_content = "payload:\n";
 
     while (getline(ss, strLine, delimiter)) {
-        if (strFind(strLine, "//")) {
-            strLine.erase(strLine.find("//"));
-            strLine = trimWhitespace(strLine);
-        }
+        strLine = trimWhitespace(strLine);
+        if (startsWith(strLine, "//"))
+            continue;
         switch (type_int) {
             case 2:
                 if (!std::any_of(QuanXRuleTypes.begin(), QuanXRuleTypes.end(),

@@ -123,6 +123,30 @@ def summarize(body, target):
     return counts
 
 
+def compatible_rules(body):
+    # The legacy exporter matches type prefixes, which also admits DOMAIN-REGEX.
+    allowed = {b'DOMAIN', b'DOMAIN-SUFFIX', b'DOMAIN-KEYWORD', b'IP-CIDR', b'IP-CIDR6',
+               b'SRC-IP-CIDR', b'GEOIP', b'IP-ASN', b'USER-AGENT', b'URL-REGEX',
+               b'AND', b'OR', b'NOT', b'PROCESS-NAME', b'IN-PORT', b'DEST-PORT', b'SRC-IP'}
+    return b'\n'.join(line for line in body.splitlines() if line.strip().split(b',', 1)[0] in allowed) + b'\n'
+
+
+def adapt_loon(body):
+    remote = False
+    lines = []
+    for line in body.decode('utf-8-sig').splitlines():
+        stripped = line.strip()
+        if re.fullmatch(r'\[.*\]', stripped): remote = stripped.lower() == '[remote rule]'
+        if remote and stripped.startswith(('https://', 'http://')):
+            url, separator, policy = stripped.partition(',')
+            if separator and not url.startswith(ORIGIN + '/getruleset?'):
+                validate_http(url)
+                encoded = base64.urlsafe_b64encode(('surge:' + url).encode()).decode().rstrip('=')
+                line = ORIGIN + '/getruleset?' + urlencode({'type': '1', 'url': encoded}) + ',' + policy
+        lines.append(line)
+    return ('\n'.join(lines) + '\n').encode()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'WWMM-Sub'
 
@@ -187,6 +211,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {'status': 'ok', 'version': 'wwmm-20261105'})
             if path == '/sub' and self.command in ('GET', 'HEAD'):
                 body, headers = convert(public_query(values))
+                if values.get('target') == 'loon': body = adapt_loon(body)
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)
             if path == '/getruleset' and self.command in ('GET', 'HEAD'):
                 if set(values) - {'type', 'url', 'group'} or values.get('type') not in ('1', '2', '3', '4', '5', '6'):
@@ -197,6 +222,7 @@ class Handler(BaseHTTPRequestHandler):
                     if decoded.startswith(prefix): decoded = decoded[len(prefix):]; break
                 validate_http(decoded)
                 body, _ = convert('/getruleset?' + urlencode(values))
+                if values['type'] == '1': body = compatible_rules(body)
                 return self.send(200, body, 'text/plain; charset=utf-8')
             if path == '/my/sub' and self.command in ('GET', 'HEAD'):
                 if set(values) - {'target', 'token'} or values.get('target') not in ('loon', 'clash'):
@@ -204,6 +230,7 @@ class Handler(BaseHTTPRequestHandler):
                 data, target = settings(), values['target']
                 if not self.authenticated(data['tokens'][target], values.get('token', '')): return
                 body, headers = convert(self.private_profile(target, data), True)
+                if target == 'loon': body = adapt_loon(body)
                 summarize(body, target)
                 headers['Content-Disposition'] = 'attachment; filename="wwmm-' + target + ('.conf"' if target == 'loon' else '.yaml"')
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)

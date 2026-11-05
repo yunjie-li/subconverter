@@ -18,6 +18,7 @@ jobs:
         run: |
           python3 deploy/test_gateway.py
           python3 tests/test_loon_export.py
+          python3 tests/test_ruleset_export.py
           c++ -std=c++17 -Wall -Wextra -Werror -I src tests/test_public_address.cpp -o /tmp/test-public-address
           /tmp/test-public-address
           node --check deploy/web/app.js

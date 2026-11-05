@@ -83,5 +83,17 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(self.request('/sub?target=loon&url=https://example.com/sub')[0], 200)
         self.assertFalse(self.calls[-1][1])
 
+    def test_loon_rules_are_wrapped_and_unsupported_types_filtered(self):
+        body = b'[Remote Rule]\nhttps://example.com/rules.list,Daily\n[MITM]\nca-p12 = synthetic-certificate\n'
+        adapted = gateway.adapt_loon(body)
+        self.assertIn(b'/getruleset?type=1&url=', adapted)
+        self.assertIn(b'ca-p12 = synthetic-certificate', adapted)
+        self.assertEqual(gateway.adapt_loon(adapted), adapted)
+        rules = b'DOMAIN-SUFFIX,example.com\nDOMAIN-REGEX,^example\\.com$\nIP-CIDR6,2001:db8::/32\nURL-REGEX,^https://example.com/\n'
+        filtered = gateway.compatible_rules(rules)
+        self.assertNotIn(b'DOMAIN-REGEX', filtered)
+        self.assertIn(b'DOMAIN-SUFFIX,example.com', filtered)
+        self.assertIn(b'IP-CIDR6', filtered)
+
 
 if __name__ == '__main__': unittest.main()

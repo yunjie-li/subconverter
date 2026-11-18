@@ -5,9 +5,10 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 spec = importlib.util.spec_from_file_location('gateway', Path(__file__).with_name('gateway.py'))
 gateway = importlib.util.module_from_spec(spec)
@@ -77,6 +78,37 @@ class GatewayTests(unittest.TestCase):
         code, _, _ = self.request('/api/generate', 'POST', {'target': 'loon'}, self.config['admin_key'])
         self.assertEqual(code, 200)
         self.assertTrue(self.calls[-1][1])
+
+    def test_dynamic_preset_and_download_use_the_same_available_pools(self):
+        self.config.update(substore_base='https://sub.example.com/private', substore_pools=['daily-main', 'ai-primary'])
+        gateway.SETTINGS_FILE.write_text(json.dumps(self.config))
+        (gateway.SETTINGS_FILE.parent / 'loon.ini').write_text(
+            '[Profile]\ntarget=loon\nconfig=https://rules.example.com/rule.ini\n'
+            'profile_token=unused\n'
+        )
+        upstream = [
+            {'name': 'cathy', 'displayName': 'Cathy'},
+            {'name': 'daily-main', 'displayName': '日常改名'},
+        ]
+        with patch.object(gateway, 'fetch_substore_collections', return_value=upstream):
+            code, raw, _ = self.request('/api/presets', key=self.config['admin_key'])
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(raw)['pools'], ['日常改名'])
+            self.assertNotIn(self.config['substore_base'].encode(), raw)
+            code, raw, _ = self.request('/api/generate', 'POST', {'target': 'loon'}, self.config['admin_key'])
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(raw)['pools'], ['日常改名'])
+            link = json.loads(raw)['download']
+            code, _, _ = self.request('/my/sub?' + urlsplit(link).query)
+            self.assertEqual(code, 200)
+
+        for path, private in self.calls:
+            query = parse_qs(urlsplit(path).query)
+            self.assertTrue(private)
+            self.assertEqual(urlsplit(path).path, '/sub')
+            self.assertEqual(query['config'], ['https://rules.example.com/rule.ini'])
+            self.assertEqual(query['url'], ['https://sub.example.com/private/download/collection/daily-main?target=ClashMeta&prettyYaml=true'])
+            self.assertNotIn('profile_token', query)
 
     def test_preset_key_rotation_preserves_long_download_keys(self):
         previous = self.config['admin_key']

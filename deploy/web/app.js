@@ -27,7 +27,7 @@ $('rule').addEventListener('change', () => {
 $('private-target').addEventListener('change', () => {
   const target = $('private-target').value;
   $('private-settings-title').textContent = {loon: 'Loon 私有设置', clash: 'Clash 基础设置', egern: 'Egern · Smart 设置'}[target];
-  $('private-note').textContent = {loon: '沿用服务器保存的个人证书、插件、Script 和 DNS。', clash: '使用相同的六个用途池和共用规则，加入 Clash 基础设置。', egern: '共用节点池与分流规则，日常和 AI 使用 Smart，外层保留故转与最后备用。'}[target];
+  $('private-note').textContent = {loon: '沿用服务器保存的个人证书、插件、Script 和 DNS。', clash: '使用 Sub-Store 用途池和共用规则，加入 Clash 基础设置。', egern: '共用节点池与分流规则，日常和 AI 使用 Smart，外层保留故转与最后备用。'}[target];
   $('egern-editor').hidden = target !== 'egern';
   if (target === 'egern' && privateKey && !savedEgernSettings) loadEgernSettings().catch((error) => message(error.message, true));
   $('result').hidden = true;
@@ -87,6 +87,21 @@ $('public-form').addEventListener('submit', (event) => {
     message('生成成功。复制链接到客户端，或下载配置。');
   });
 });
+function showPools(pools) {
+  if (!pools.length) {
+    $('pools').textContent = '当前没有可用的用途池。';
+    return;
+  }
+  $('pools').replaceChildren(...pools.map((name) => {
+    const element = document.createElement('div'); element.className = 'pool';
+    const check = document.createElement('span'); check.className = 'pool-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true');
+    const content = document.createElement('span');
+    const title = document.createElement('strong'); title.textContent = name;
+    const detail = document.createElement('small'); detail.textContent = '引用 Sub-Store 组合的最新输出';
+    content.append(title, detail); element.append(check, content); return element;
+  }));
+}
+
 $('unlock-form').addEventListener('submit', (event) => {
   event.preventDefault();
   busy(event.currentTarget, async () => {
@@ -96,19 +111,7 @@ $('unlock-form').addEventListener('submit', (event) => {
     const data = await response.json();
     privateKey = key;
     $('key').value = '';
-    const descriptions = {
-      'WM 均衡': '日常负载均衡', '日常主用': '网页 / YouTube / Telegram',
-      'AI 优先': 'AI 优先使用的节点', 'AI 后备': 'AI 优先池不可用时接替',
-      '最后备用': '其他池不可用时兜底', 'Cathy 专用': '仅用于 Cathy 专用分组',
-    };
-    $('pools').replaceChildren(...data.pools.map((name) => {
-      const element = document.createElement('div'); element.className = 'pool';
-      const check = document.createElement('span'); check.className = 'pool-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true');
-      const content = document.createElement('span');
-      const title = document.createElement('strong'); title.textContent = name;
-      const detail = document.createElement('small'); detail.textContent = descriptions[name] || '引用 Sub-Store 组合的最新输出';
-      content.append(title, detail); element.append(check, content); return element;
-    }));
+    showPools(data.pools);
     $('auth-state').textContent = '已解锁';
     $('auth-state').classList.add('unlocked');
     $('unlock-form').hidden = true;
@@ -120,7 +123,7 @@ $('unlock-form').addEventListener('submit', (event) => {
 $('private-form').addEventListener('submit', (event) => {
   event.preventDefault();
   busy(event.currentTarget, async () => {
-    message('正在读取六个用途池并生成配置，请稍候…');
+    message('正在读取 Sub-Store 用途池并生成配置，请稍候…');
     const target = $('private-target').value;
     if (target === 'egern' && $('egern-settings').value !== savedEgernSettings) throw new Error('请先保存 Egern 设置，或重新加载已保存的内容。');
     const response = await api('/api/generate', {
@@ -128,6 +131,7 @@ $('private-form').addEventListener('submit', (event) => {
       body: JSON.stringify({ target }),
     });
     const data = await response.json();
+    if (Array.isArray(data.pools)) showPools(data.pools);
     result(data.download, target, data, true);
     const missing = data.pool_counts && !data.pool_counts['AI-BACKUP'];
     const warnings = data.warnings && data.warnings.length ? ' Egern 已略过进程名等不支持的规则，详情见下载文件顶部注释。' : '';

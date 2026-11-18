@@ -4,7 +4,7 @@
 
 节点只在 Sub-Store 管理，业务分流只在 GitHub 共用 INI 管理。私有证书、插件和源订阅地址保存在服务器 `/opt/sub/private`，不进入 GitHub、网页静态目录或公共转换容器。
 
-## 六个用途池
+## 用途池
 
 | Sub-Store 内部名称 | 显示名称 | 用途标记 | 默认来源与筛选 |
 | --- | --- | --- | --- |
@@ -13,11 +13,10 @@
 | ai-primary | AI 优先 | `[AI]` | 全部 WWMM，加 69YUN 日本 |
 | ai-backup | AI 后备 | `[AI-BACKUP]` | MESL |
 | last-resort | 最后备用 | `[BACKUP]` | 良心云 |
-| cathy | Cathy 专用 | `[CATHY]` | Gary02 |
 
 当前五条源订阅均已加入“倍率上限 2x（排除 >2x）”操作，因此单独订阅和所有组合都只保留不超过 2 倍的节点；未标倍率的节点保留。新增源订阅时，在“节点操作”中沿用这一过滤，规则定义在 `multiplier-filter.json`。`apply_multiplier_filter.py` 会先备份，再为全部源订阅幂等添加该操作，不改变其他节点操作。
 
-在 Sub-Store 的组合订阅中调整成员、筛选和顺序即可换机场。保留上述组合内部名称及最后的“用途标记”重命名操作。国旗可以保留；同一物理节点出现在多个池时会拥有不同用途名称，连接信息保持不变。
+在 Sub-Store 的组合订阅中调整成员、筛选、顺序和显示名称。保留组合内部名称与最后的“用途标记”重命名操作。解锁预设或重新生成时，服务会读取组合当前的显示名称及可用清单，客户端更新时使用现有下载链接。
 
 通过 API 创建的每条操作都必须带有不同的 `id`，这是 Sub-Store 前端读取、编辑和保存参数的键；只有 `type` 和 `args` 时，后端可能正常导出，但界面会显示空白并可能在保存时覆盖参数。两个配置脚本均会补齐 ID，并保留已有有效 ID。
 
@@ -27,16 +26,18 @@
 
 | 路径 | 内容 |
 | --- | --- |
-| `/opt/sub/private/settings.json` | 私有预设密钥、三个客户端各自的只读下载密钥、内部转换密钥 |
+| `/opt/sub/private/settings.json` | 私有预设密钥、三个客户端各自的只读下载密钥、内部转换密钥及 Sub-Store 用途池 |
 | `/opt/sub/private/loon-base.conf` | Loon General、Plugin、Script、MITM 等个人设置 |
 | `/opt/sub/private/clash-base.yaml` | Clash 基础设置 |
 | `/opt/sub/private/egern/base.yaml` | Egern DNS、模块、Script、MITM 和 Smart 偏好；仅管理密钥可通过网页编辑 |
-| `/opt/sub/private/loon.ini`、`clash.ini` | 六条组合地址、共用 INI 地址与客户端参数 |
+| `/opt/sub/private/loon.ini`、`clash.ini` | 共用 INI 地址与各客户端生成参数 |
 | `/opt/sub/public` | 公共转换使用的无个人证书基础模板 |
 | `/opt/sub/wwmm-compose.yml` | 新服务的持久化部署配置 |
 | `/opt/sub/backups` | 原部署、Sub-Store 和切换前配置备份 |
 
 私有目录和文件归属 `10001:10001`，目录权限 `700`，文件权限 `600`。使用会替换文件的编辑器时，应保持原归属和权限。私有模板中只维护个人设置，节点、策略组和业务规则由共用 INI 生成。保留同一份 `ca-p12` 和 `ca-passphrase`，更新完整配置时才能沿用设备已安装的证书。
+
+动态预设使用服务器私有的 Sub-Store 接口根地址 `substore_base`，以及参与生成的组合内部名称列表 `substore_pools`。从旧档案迁移时，可从组合下载地址的 `/download/collection/` 前一段取得根地址，然后删除两个私有档案里的 `url`。例如启用 `["wm-balance", "daily-main", "ai-primary", "ai-backup", "last-resort"]`。列表同时决定展示和生成顺序。Sub-Store 中删除某个组合后，它会从预设与生成结果中移除。新增用途池时，将内部名称加入列表，并在共用 INI 中按用途标记引用它。
 
 修改模板后下次获取配置生效；修改转换器偏好需要重启对应容器。远程 INI 的缓存为 60 秒。Loon 远程规则、插件资源更新和整份主配置的重新导入是不同操作，服务器不会替设备安装或信任新证书。
 

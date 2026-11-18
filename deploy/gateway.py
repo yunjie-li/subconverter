@@ -1,6 +1,7 @@
 """Public conversion and fixed private presets; private converters have a separate network."""
 import base64
 from collections import defaultdict, deque
+from configparser import ConfigParser, Error as ConfigParserError
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
@@ -13,7 +14,7 @@ import time
 import tempfile
 import egern
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlencode, urlsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent
@@ -46,6 +47,46 @@ def settings():
     if len(data.get('admin_key', '')) < 12 or any(len(data.get('tokens', {}).get(t, '')) < 32 for t in PRIVATE_TARGETS):
         raise ValueError('Private preset credentials are not configured')
     return data
+
+
+def fetch_substore_collections(base):
+    url = urlsplit(base)
+    if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment:
+        raise ValueError('Sub-Store 服务器地址无效')
+    request = Request(base + '/api/collections', headers={'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (WWMM-Sub-Web/1.0)'})
+    with urlopen(request, timeout=8) as response:
+        raw = response.read(2 * 1024 * 1024 + 1)
+    if len(raw) > 2 * 1024 * 1024:
+        raise ValueError('Sub-Store 组合列表过大')
+    payload = json.loads(raw)
+    if payload.get('status') != 'success' or not isinstance(payload.get('data'), list):
+        raise ValueError('无法读取 Sub-Store 组合')
+    return payload['data']
+
+
+def active_pools(data, *, allow_unavailable_catalog=False):
+    base = data.get('substore_base')
+    if not base:
+        return [(name, None) for name in data.get('pools', [])]
+    configured = data['substore_pools']
+    if not isinstance(configured, list) or not all(
+        isinstance(name, str) and re.fullmatch(r'[a-z0-9][a-z0-9-]*', name) for name in configured
+    ) or len(set(configured)) != len(configured):
+        raise ValueError('私有用途池配置无效')
+    base = base.rstrip('/')
+    try:
+        rows = fetch_substore_collections(base)
+        names = {row['name']: row.get('displayName') or row.get('display-name') or row['name'] for row in rows}
+    except OSError:
+        if not allow_unavailable_catalog:
+            raise
+        # A client has no preset screen. Keep its configured sources usable if
+        # the catalogue is temporarily unavailable but downloads still work.
+        names = {name: name for name in configured}
+    return [
+        (names[name], base + '/download/collection/' + quote(name, safe='') + '?target=ClashMeta&prettyYaml=true')
+        for name in configured if name in names
+    ]
 
 
 def equal(left, right):
@@ -216,17 +257,37 @@ class Handler(BaseHTTPRequestHandler):
         self.send(429 if limited else 401, {'error': '请求过于频繁' if limited else '密钥无效或缺失'})
         return False
 
-    def private_profile(self, target, data):
-        return '/getprofile?' + urlencode({'name': 'private/' + ('clash' if target == 'egern' else target) + '.ini', 'token': data.get('backend_token', data['tokens'][target])})
+    def private_profile(self, target, data, pools):
+        profile = ('clash' if target == 'egern' else target) + '.ini'
+        if not data.get('substore_base'):
+            return '/getprofile?' + urlencode({'name': 'private/' + profile, 'token': data.get('backend_token', data['tokens'][target])})
+
+        urls = [url for _, url in pools]
+        if not urls:
+            raise ValueError('没有可用的 Sub-Store 用途池')
+        parser = ConfigParser(interpolation=None)
+        with (SETTINGS_FILE.parent / profile).open() as handle:
+            parser.read_file(handle)
+        options = dict(parser['Profile'])
+        options.pop('profile_token', None)
+        options.update(target='clash' if target == 'egern' else target, url='|'.join(urls), token=data['backend_token'])
+        update_url = self.private_downloads(data)[target]
+        options['profile_data'] = base64.b64encode(update_url.encode()).decode()
+        return '/sub?' + urlencode(options)
+
+    def private_downloads(self, data):
+        return {
+            target: ORIGIN + '/my/sub?' + urlencode({'target': target, 'token': data['tokens'][target]})
+            for target in PRIVATE_TARGETS
+        }
 
     def preset_info(self, data):
-        return {'pools': data.get('pools', []), 'downloads': {
-            t: ORIGIN + '/my/sub?' + urlencode({'target': t, 'token': data['tokens'][t]}) for t in PRIVATE_TARGETS}}
+        return {'pools': [name for name, _ in active_pools(data)], 'downloads': self.private_downloads(data)}
 
-    def private_output(self, target, data):
-        body, headers = convert(self.private_profile(target, data), True)
+    def private_output(self, target, data, pools):
+        body, headers = convert(self.private_profile(target, data, pools), True)
         if target == 'loon': body = adapt_loon(body)
-        if target == 'egern': body = adapt_egern(body, True, self.preset_info(data)['downloads'][target])
+        if target == 'egern': body = adapt_egern(body, True, self.private_downloads(data)[target])
         return body, headers
 
     def do_GET(self): self.dispatch()
@@ -284,7 +345,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError('私有配置只接受客户端类型和下载密钥')
                 data, target = settings(), values['target']
                 if not self.authenticated(data['tokens'][target], values.get('token', '')): return
-                body, headers = self.private_output(target, data)
+                body, headers = self.private_output(target, data, active_pools(data, allow_unavailable_catalog=True))
                 summarize(body, target)
                 headers['Content-Disposition'] = 'attachment; filename="wwmm-' + target + ('.conf"' if target == 'loon' else '.yaml"')
                 return self.send(200, body, 'text/plain; charset=utf-8', headers)
@@ -313,10 +374,12 @@ class Handler(BaseHTTPRequestHandler):
                     if not isinstance(body, dict) or set(body) != {'target'} or body['target'] not in PRIVATE_TARGETS:
                         raise ValueError('请选择 Loon、Clash 或 Egern')
                     target = body['target']
-                    result, _ = self.private_output(target, data)
-                    return self.send(200, {**summarize(result, target), 'download': self.preset_info(data)['downloads'][target]})
+                    pools = active_pools(data)
+                    result, _ = self.private_output(target, data, pools)
+                    return self.send(200, {**summarize(result, target), 'pools': [name for name, _ in pools],
+                                           'download': self.private_downloads(data)[target]})
             return self.send(404, {'error': 'Not found'})
-        except (ValueError, TypeError, KeyError, RecursionError, UnicodeError, egern.yaml.YAMLError, json.JSONDecodeError):
+        except (ValueError, TypeError, KeyError, ConfigParserError, RecursionError, UnicodeError, egern.yaml.YAMLError, json.JSONDecodeError):
             self.send(400, {'error': '请求或生成结果无效，请检查订阅、参数和规则'})
         except (HTTPError, URLError, TimeoutError, OSError):
             self.send(502, {'error': '转换失败，请检查订阅是否可用后重试'})

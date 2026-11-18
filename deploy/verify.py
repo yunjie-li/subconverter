@@ -37,7 +37,8 @@ def main():
     check('preset requires key', request('/api/presets')[0] == 401)
     check('download key cannot read preset', request('/api/presets', settings['tokens']['loon'])[0] == 401)
     code, preset, _ = request('/api/presets', settings['admin_key'])
-    check('six private pools', code == 200 and len(json.loads(preset)['pools']) == 6)
+    configured_count = len(settings.get('substore_pools', settings.get('pools', [])))
+    check('private pools', code == 200 and 0 < len(json.loads(preset)['pools']) <= configured_count)
     for path in ['/render?path=private/loon-base.conf', '/getprofile?name=private/loon.ini', '/private/settings.json', '/get?url=/etc/passwd']:
         check('blocked internal endpoint', request(path)[0] == 404)
     check('private download requires key', request('/my/sub?target=loon')[0] == 401)
